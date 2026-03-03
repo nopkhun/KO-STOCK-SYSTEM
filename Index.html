@@ -75,20 +75,52 @@
             }
         }
 
-        @keyframes toastFade {
+        @keyframes bannerSlideDown {
+            from { opacity: 0; transform: translateY(-100%); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .banner-in {
+            animation: bannerSlideDown 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes savingPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .saving-pulse {
+            animation: savingPulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes toastSlideUp {
             from {
                 opacity: 0;
-                transform: translate(-50%, 6px);
+                transform: translate(-50%, 20px) scale(0.95);
             }
-
             to {
                 opacity: 1;
-                transform: translate(-50%, 0);
+                transform: translate(-50%, 0) scale(1);
+            }
+        }
+
+        @keyframes toastSlideDown {
+            from {
+                opacity: 1;
+                transform: translate(-50%, 0) scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: translate(-50%, 12px) scale(0.95);
             }
         }
 
         .toast-in {
-            animation: toastFade 0.2s ease-out forwards;
+            animation: toastSlideUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .toast-out {
+            animation: toastSlideDown 0.2s ease-in forwards;
         }
 
         @media print {
@@ -191,7 +223,8 @@
             'ChevronRight', 'ClipboardList', 'ArrowLeftRight', 'Warehouse',
             'Calendar', 'Truck', 'Trash2', 'CheckCircle2', 'Clock', 'ClipboardCheck',
             'Save', 'RotateCcw', 'BarChart3', 'TrendingUp', 'Boxes', 'Loader2',
-            'Package', 'Building2', 'Pencil', 'Tags', 'Ruler', 'Filter', 'X', 'Download', 'Printer', 'Copy', 'LogOut', 'Users', 'ScrollText', 'Calculator', 'Menu', 'DollarSign'
+            'Package', 'Building2', 'Pencil', 'Tags', 'Ruler', 'Filter', 'X', 'Download', 'Printer', 'Copy', 'LogOut', 'Users', 'ScrollText', 'Calculator', 'Menu', 'DollarSign',
+            'LayoutGrid', 'Zap'
         ];
 
         // สร้าง React Component สำหรับไอคอนแต่ละตัว
@@ -205,7 +238,8 @@
             LayoutDashboard, PackagePlus, PackageMinus, History, Store, AlertTriangle, Search, Plus,
             ArrowUpCircle, ArrowDownCircle, ChevronRight, ClipboardList, ArrowLeftRight, Warehouse,
             Calendar, Truck, Trash2, CheckCircle2, Clock, ClipboardCheck, Save, RotateCcw,
-            BarChart3, TrendingUp, Boxes, Loader2, Package, Building2, Pencil, Tags, Ruler, Filter, X, Download, Printer, Copy, LogOut, Users, ScrollText, Calculator, Menu, DollarSign
+            BarChart3, TrendingUp, Boxes, Loader2, Package, Building2, Pencil, Tags, Ruler, Filter, X, Download, Printer, Copy, LogOut, Users, ScrollText, Calculator, Menu, DollarSign,
+            LayoutGrid, Zap
         } = Icons;
         // -----------------------------------------------------------
 
@@ -239,6 +273,7 @@
             // UI States
             const [activeBranch, setActiveBranch] = useState(null);
             const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer
+            const [quickActionOpen, setQuickActionOpen] = useState(false); // mobile quick action sheet
             const [branchDropdownOpen, setBranchDropdownOpen] = useState(false); // desktop branch selector
             const VALID_TABS = ['dashboard', 'inventory', 'stocktake', 'history', 'reports', 'items', 'branches', 'units', 'categories', 'suppliers', 'costcalc', 'users', 'value-report'];
             const [activeTab, setActiveTabState] = useState(() => {
@@ -377,8 +412,8 @@
 
             const persistAuth = (t, u) => {
                 try {
-                    if (typeof sessionStorage !== 'undefined' && t && u)
-                        sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token: t, user: u }));
+                    if (typeof localStorage !== 'undefined' && t && u)
+                        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token: t, user: u, loginTime: Date.now() }));
                 } catch (_) { }
             };
 
@@ -387,9 +422,9 @@
                 setUser(null);
                 setRequirePasswordChange(false);
                 try {
-                    if (typeof sessionStorage !== 'undefined') {
-                        sessionStorage.removeItem(AUTH_STORAGE_KEY);
-                        sessionStorage.removeItem(MASTER_CACHE_KEY);
+                    if (typeof localStorage !== 'undefined') {
+                        localStorage.removeItem(AUTH_STORAGE_KEY);
+                        localStorage.removeItem(MASTER_CACHE_KEY);
                     }
                 } catch (_) { }
             };
@@ -444,12 +479,16 @@
 
             useEffect(() => {
                 try {
-                    const raw = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(AUTH_STORAGE_KEY) : null;
+                    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(AUTH_STORAGE_KEY) : null;
                     if (raw) {
                         const o = JSON.parse(raw);
-                        if (o && o.token && o.user) {
+                        const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+                        if (o && o.token && o.user && (!o.loginTime || (Date.now() - o.loginTime) < SEVEN_DAYS)) {
                             setToken(o.token);
                             setUser(o.user);
+                        } else if (o && o.loginTime && (Date.now() - o.loginTime) >= SEVEN_DAYS) {
+                            // Expired — clear silently
+                            localStorage.removeItem(AUTH_STORAGE_KEY);
                         }
                     }
                 } catch (_) { }
@@ -457,7 +496,7 @@
 
             useEffect(() => {
                 if (!toast.show) return;
-                const t = setTimeout(() => setToast(prev => ({ ...prev, show: false })), 2200);
+                const t = setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3500);
                 return () => clearTimeout(t);
             }, [toast.show]);
 
@@ -514,7 +553,7 @@
                             if (branches.length === 0) {
                                 setActiveBranch(null);
                             } else {
-                                const storedId = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(BRANCH_STORAGE_KEY) : null;
+                                const storedId = typeof localStorage !== 'undefined' ? localStorage.getItem(BRANCH_STORAGE_KEY) : null;
                                 const restored = storedId ? branches.find(b => b.id === storedId) : null;
                                 setActiveBranch(restored || branches[0]);
                             }
@@ -561,8 +600,8 @@
                             setIsLoading(false);
                             // Phase 4: save master cache for instant UI on next open
                             try {
-                                if (typeof sessionStorage !== 'undefined') {
-                                    sessionStorage.setItem(MASTER_CACHE_KEY, JSON.stringify({
+                                if (typeof localStorage !== 'undefined') {
+                                    localStorage.setItem(MASTER_CACHE_KEY, JSON.stringify({
                                         items: d.items || [],
                                         branches: d.branches || [],
                                         units: d.units || [],
@@ -618,8 +657,8 @@
                 if (!token || requirePasswordChange) return;
                 var fromCache = false;
                 try {
-                    if (typeof sessionStorage !== 'undefined') {
-                        var raw = sessionStorage.getItem(MASTER_CACHE_KEY);
+                    if (typeof localStorage !== 'undefined') {
+                        var raw = localStorage.getItem(MASTER_CACHE_KEY);
                         if (raw) {
                             var cache = JSON.parse(raw);
                             if (cache && (cache.branches?.length > 0 || cache.items?.length >= 0)) {
@@ -634,7 +673,7 @@
                                 setMenuOverheadsMaster(cache.menuOverheads || []);
                                 var br = cache.branches || [];
                                 if (br.length > 0) {
-                                    var storedId = sessionStorage.getItem(BRANCH_STORAGE_KEY);
+                                    var storedId = localStorage.getItem(BRANCH_STORAGE_KEY);
                                     var restored = storedId ? br.find(function (b) { return b.id === storedId; }) : null;
                                     setActiveBranch(restored || br[0]);
                                 }
@@ -665,8 +704,8 @@
             }, [user?.role, activeTab]);
 
             useEffect(() => {
-                if (activeBranch?.id && typeof sessionStorage !== 'undefined') sessionStorage.setItem(BRANCH_STORAGE_KEY, activeBranch.id);
-                else if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(BRANCH_STORAGE_KEY);
+                if (activeBranch?.id && typeof localStorage !== 'undefined') localStorage.setItem(BRANCH_STORAGE_KEY, activeBranch.id);
+                else if (typeof localStorage !== 'undefined') localStorage.removeItem(BRANCH_STORAGE_KEY);
             }, [activeBranch?.id]);
 
             useEffect(() => {
@@ -1623,127 +1662,100 @@
             };
 
             const refetchData = (onDone) => {
+                setInventoryLoaded(false);
                 google.script.run
                     .withSuccessHandler((data) => {
                         if (data && data.error === 'Unauthorized') { clearAuth(); if (typeof onDone === 'function') onDone(null); return; }
                         var d = (data && typeof data === 'object') ? data : {};
                         setDataLoadFailed(false);
-                        setInventoryLoaded(true);
                         setLastSystemDebug(d._debug || null);
                         setLastSystemError(d._debugError || '');
                         var emptyMaster = (d._debugError) || ((d.units || []).length === 0 && (d.categories || []).length === 0);
-                        if (emptyMaster) {
-                            if (d._debugError) showToast('โหลดสต็อก/ประวัติล่าสุดไม่สมบูรณ์ — ข้อมูลหลักยังใช้ได้', 'error');
-                            // โหลดสต็อกและประวัติแยก (getSystemData ล้มแต่ getInventoryAndTransactions อาจได้)
-                            google.script.run
-                                .withSuccessHandler(function (invData) {
-                                    if (invData && invData.error === 'Unauthorized') return;
-                                    var inv = (invData && typeof invData === 'object') ? invData : {};
-                                    setStock(inv.stock || {});
-                                    setTransactions(inv.transactions || []);
-                                    if (inv.error) showToast('โหลดประวัติไม่สมบูรณ์: ' + inv.error, 'error');
-                                })
-                                .withFailureHandler(function () { })
-                                .getInventoryAndTransactions(token);
-                            if (typeof onDone === 'function') onDone(null);
-                            return;
+                        if (!emptyMaster) {
+                            setItemsMaster(d.items || []);
+                            setBranchesMaster(d.branches || []);
+                            setUnitsMaster(d.units || []);
+                            setCategoriesMaster(d.categories || []);
+                            setSuppliersMaster(d.suppliers || []);
+                            setItemSuppliersMaster(d.itemSuppliers || []);
+                            setMenusMaster(d.menus || []);
+                            setMenuIngredientsMaster(d.menuIngredients || []);
+                            setMenuOverheadsMaster(d.menuOverheads || []);
+                            var br = d.branches || [];
+                            if (br.length > 0) {
+                                var storedId = typeof localStorage !== 'undefined' ? localStorage.getItem(BRANCH_STORAGE_KEY) : null;
+                                var kept = storedId ? br.find(function (b) { return b.id === storedId; }) : (activeBranch && br.find(function (b) { return b.id === activeBranch.id; }));
+                                setActiveBranch(kept || br[0]);
+                            }
+                        } else if (d._debugError) {
+                            showToast('โหลดข้อมูลหลักไม่สมบูรณ์ — ข้อมูลสต็อกอาจไม่ครบ', 'error');
                         }
-                        setItemsMaster(d.items || []);
-                        setBranchesMaster(d.branches || []);
-                        setUnitsMaster(d.units || []);
-                        setCategoriesMaster(d.categories || []);
-                        setSuppliersMaster(d.suppliers || []);
-                        setItemSuppliersMaster(d.itemSuppliers || []);
-                        setMenusMaster(d.menus || []);
-                        setMenuIngredientsMaster(d.menuIngredients || []);
-                        setMenuOverheadsMaster(d.menuOverheads || []);
-                        var hasStockTx = (d.stock && Object.keys(d.stock).length > 0) || (d.transactions && d.transactions.length > 0);
-                        if (hasStockTx) {
-                            setStock(d.stock || {});
-                            setTransactions(d.transactions || []);
-                        } else {
-                            google.script.run.withSuccessHandler(function (invData) {
+                        if (typeof onDone === 'function') onDone(d);
+                        // Phase 2: load inventory in background
+                        google.script.run
+                            .withSuccessHandler(function (invData) {
+                                setInventoryLoaded(true);
                                 if (invData && invData.error === 'Unauthorized') return;
                                 var inv = (invData && typeof invData === 'object') ? invData : {};
                                 setStock(inv.stock || {});
                                 setTransactions(inv.transactions || []);
                                 if (inv.error) showToast('โหลดประวัติไม่สมบูรณ์: ' + inv.error, 'error');
-                            }).withFailureHandler(function () { }).getInventoryAndTransactions(token);
-                        }
-                        var br = d.branches || [];
-                        if (br.length > 0) {
-                            var storedId = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(BRANCH_STORAGE_KEY) : null;
-                            var kept = storedId ? br.find(function (b) { return b.id === storedId; }) : (activeBranch && br.find(function (b) { return b.id === activeBranch.id; }));
-                            setActiveBranch(kept || br[0]);
-                        }
-                        if (typeof onDone === 'function') onDone(d);
+                            })
+                            .withFailureHandler(function () { setInventoryLoaded(true); })
+                            .getInventoryAndTransactions(token);
                     })
-                    .withFailureHandler((err) => { showError(err, 'โหลดข้อมูลไม่สำเร็จ'); if (typeof onDone === 'function') onDone(null); })
-                    .getSystemData(token);
+                    .withFailureHandler((err) => { showError(err, 'โหลดข้อมูลไม่สำเร็จ'); if (typeof onDone === 'function') onDone(null); setInventoryLoaded(true); })
+                    .getSystemDataBasic(token);
             };
 
             const handleRefresh = () => {
                 setIsRefreshing(true);
+                setInventoryLoaded(false);
                 google.script.run
                     .withSuccessHandler((data) => {
                         if (data && data.error === 'Unauthorized') { clearAuth(); setIsRefreshing(false); return; }
                         var d = (data && typeof data === 'object') ? data : {};
-                        setInventoryLoaded(true);
                         var emptyMaster = (d._debugError) || ((d.units || []).length === 0 && (d.categories || []).length === 0);
-                        if (emptyMaster) {
-                            showToast('โหลดข้อมูลไม่สมบูรณ์ — กรุณาลองใหม่', 'error');
-                            // โหลดสต็อกและประวัติแยก
-                            google.script.run
-                                .withSuccessHandler(function (invData) {
-                                    if (invData && invData.error === 'Unauthorized') { clearAuth(); setIsRefreshing(false); return; }
-                                    var inv = (invData && typeof invData === 'object') ? invData : {};
-                                    setStock(inv.stock || {});
-                                    setTransactions(inv.transactions || []);
-                                    if (inv.error) showToast('โหลดประวัติไม่สมบูรณ์: ' + inv.error, 'error');
-                                    setIsRefreshing(false);
-                                })
-                                .withFailureHandler(function () { setIsRefreshing(false); })
-                                .getInventoryAndTransactions(token);
-                            return;
-                        }
-                        setItemsMaster(d.items || []);
-                        setBranchesMaster(d.branches || []);
-                        setUnitsMaster(d.units || []);
-                        setCategoriesMaster(d.categories || []);
-                        setSuppliersMaster(d.suppliers || []);
-                        setItemSuppliersMaster(d.itemSuppliers || []);
-                        setMenusMaster(d.menus || []);
-                        setMenuIngredientsMaster(d.menuIngredients || []);
-                        setMenuOverheadsMaster(d.menuOverheads || []);
-                        var hasStockTx = (d.stock && Object.keys(d.stock).length > 0) || (d.transactions && d.transactions.length > 0);
-                        if (hasStockTx) {
-                            setStock(d.stock || {});
-                            setTransactions(d.transactions || []);
-                            showToast('โหลดข้อมูลใหม่แล้ว');
-                            setIsRefreshing(false);
+                        if (!emptyMaster) {
+                            setItemsMaster(d.items || []);
+                            setBranchesMaster(d.branches || []);
+                            setUnitsMaster(d.units || []);
+                            setCategoriesMaster(d.categories || []);
+                            setSuppliersMaster(d.suppliers || []);
+                            setItemSuppliersMaster(d.itemSuppliers || []);
+                            setMenusMaster(d.menus || []);
+                            setMenuIngredientsMaster(d.menuIngredients || []);
+                            setMenuOverheadsMaster(d.menuOverheads || []);
+                            var br = d.branches || [];
+                            if (br.length > 0) {
+                                var storedId = typeof localStorage !== 'undefined' ? localStorage.getItem(BRANCH_STORAGE_KEY) : null;
+                                var kept = storedId ? br.find(function (b) { return b.id === storedId; }) : (activeBranch && br.find(function (b) { return b.id === activeBranch.id; }));
+                                setActiveBranch(kept || br[0]);
+                            }
                         } else {
-                            google.script.run.withSuccessHandler(function (invData) {
-                                if (invData && invData.error === 'Unauthorized') { clearAuth(); setIsRefreshing(false); return; }
+                            showToast('โหลดข้อมูลไม่สมบูรณ์ — กรุณาลองใหม่', 'error');
+                        }
+                        setIsRefreshing(false);
+                        // Phase 2: load inventory in background
+                        google.script.run
+                            .withSuccessHandler(function (invData) {
+                                setInventoryLoaded(true);
+                                if (invData && invData.error === 'Unauthorized') { clearAuth(); return; }
                                 var inv = (invData && typeof invData === 'object') ? invData : {};
                                 setStock(inv.stock || {});
                                 setTransactions(inv.transactions || []);
+                                if (!emptyMaster) showToast('โหลดข้อมูลใหม่แล้ว');
                                 if (inv.error) showToast('โหลดประวัติไม่สมบูรณ์: ' + inv.error, 'error');
-                                showToast('โหลดข้อมูลใหม่แล้ว');
-                                setIsRefreshing(false);
-                            }).withFailureHandler(function () { setIsRefreshing(false); }).getInventoryAndTransactions(token);
-                        }
-                        var br = d.branches || [];
-                        if (br.length > 0) {
-                            var storedId = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(BRANCH_STORAGE_KEY) : null;
-                            var kept = storedId ? br.find(function (b) { return b.id === storedId; }) : (activeBranch && br.find(function (b) { return b.id === activeBranch.id; }));
-                            setActiveBranch(kept || br[0]);
-                        }
+                            })
+                            .withFailureHandler(function () { setInventoryLoaded(true); showToast('โหลดสต็อกไม่สำเร็จ', 'error'); })
+                            .getInventoryAndTransactions(token);
                     })
                     .withFailureHandler((err) => {
                         showError(err, 'โหลดข้อมูลไม่สำเร็จ');
                         setIsRefreshing(false);
+                        setInventoryLoaded(true);
                     })
-                    .getSystemData(token);
+                    .getSystemDataBasic(token);
             };
 
             // อัปเดตข้อมูลเมื่อกลับมาเปิดแท็บ/หน้าต่าง และทุก 30 วินาที เมื่อแอปอยู่ foreground
@@ -1964,7 +1976,7 @@
                             setTransactions(data.transactions || []);
                             var br = data.branches || [];
                             if (br.length > 0) {
-                                var storedId = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(BRANCH_STORAGE_KEY) : null;
+                                var storedId = typeof localStorage !== 'undefined' ? localStorage.getItem(BRANCH_STORAGE_KEY) : null;
                                 var kept = storedId ? br.find(function (b) { return b.id === storedId; }) : (activeBranch && br.find(function (b) { return b.id === activeBranch.id; }));
                                 setActiveBranch(kept || br[0]);
                             }
@@ -2441,8 +2453,15 @@
                         </div>
                     </div>
                     {toast.show && (
-                        <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-2xl text-white font-bold shadow-lg toast-in ${toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`}>
-                            {toast.message}
+                        <div
+                            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] toast-in flex items-center gap-3 px-5 py-4 rounded-2xl text-white font-bold shadow-2xl min-w-[280px] max-w-[90vw] ${toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`}
+                            role="alert" aria-live="polite"
+                        >
+                            <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${toast.type === 'error' ? 'bg-rose-500' : 'bg-emerald-500'}`}>
+                                {toast.type === 'error' ? <X size={18} strokeWidth={3} /> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                            </div>
+                            <span className="flex-1 text-sm leading-snug">{toast.message}</span>
+                            <button type="button" onClick={() => setToast(prev => ({ ...prev, show: false }))} className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity" aria-label="ปิด"><X size={15} strokeWidth={2.5} /></button>
                         </div>
                     )}
                 </div>
@@ -2471,8 +2490,15 @@
                         </div>
                     </div>
                     {toast.show && (
-                        <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-2xl text-white font-bold shadow-lg toast-in ${toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`}>
-                            {toast.message}
+                        <div
+                            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] toast-in flex items-center gap-3 px-5 py-4 rounded-2xl text-white font-bold shadow-2xl min-w-[280px] max-w-[90vw] ${toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`}
+                            role="alert" aria-live="polite"
+                        >
+                            <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${toast.type === 'error' ? 'bg-rose-500' : 'bg-emerald-500'}`}>
+                                {toast.type === 'error' ? <X size={18} strokeWidth={3} /> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                            </div>
+                            <span className="flex-1 text-sm leading-snug">{toast.message}</span>
+                            <button type="button" onClick={() => setToast(prev => ({ ...prev, show: false }))} className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity" aria-label="ปิด"><X size={15} strokeWidth={2.5} /></button>
                         </div>
                     )}
                 </div>
@@ -2572,8 +2598,15 @@
                         </div>
                     </div>
                     {toast.show && (
-                        <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-2xl text-white font-bold shadow-lg toast-in ${toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`}>
-                            {toast.message}
+                        <div
+                            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] toast-in flex items-center gap-3 px-5 py-4 rounded-2xl text-white font-bold shadow-2xl min-w-[280px] max-w-[90vw] ${toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`}
+                            role="alert" aria-live="polite"
+                        >
+                            <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${toast.type === 'error' ? 'bg-rose-500' : 'bg-emerald-500'}`}>
+                                {toast.type === 'error' ? <X size={18} strokeWidth={3} /> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                            </div>
+                            <span className="flex-1 text-sm leading-snug">{toast.message}</span>
+                            <button type="button" onClick={() => setToast(prev => ({ ...prev, show: false }))} className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity" aria-label="ปิด"><X size={15} strokeWidth={2.5} /></button>
                         </div>
                     )}
                 </div>
@@ -2649,8 +2682,111 @@
                         </div>
                     </aside>
 
+                    {/* Bottom Navigation Bar — mobile only */}
+                    {token && !isLoading && (
+                        <>
+                            {/* Quick Action Backdrop */}
+                            {quickActionOpen && (
+                                <div className="fixed inset-0 bg-black/40 z-[45] md:hidden" onClick={() => setQuickActionOpen(false)} aria-hidden="true" />
+                            )}
+                            {/* Quick Action Sheet */}
+                            {quickActionOpen && user?.role !== 'viewer' && (
+                                <div className="fixed bottom-[72px] left-0 right-0 z-[46] md:hidden px-4">
+                                    <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 pb-5">
+                                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest text-center mb-4">ทำรายการ</p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={() => { setQuickActionOpen(false); openModal('in'); }}
+                                                className="flex items-center gap-3 p-4 rounded-2xl bg-orange-50 border-2 border-orange-100 hover:border-orange-300 active:bg-orange-100 transition-all"
+                                            >
+                                                <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center text-white shrink-0"><Plus size={22} /></div>
+                                                <div className="text-left">
+                                                    <p className="font-black text-slate-900 text-sm">นำเข้า</p>
+                                                    <p className="text-xs text-slate-500">รับของเข้าคลัง</p>
+                                                </div>
+                                            </button>
+                                            <button
+                                                onClick={() => { setQuickActionOpen(false); openModal('out'); }}
+                                                className="flex items-center gap-3 p-4 rounded-2xl bg-rose-50 border-2 border-rose-100 hover:border-rose-300 active:bg-rose-100 transition-all"
+                                            >
+                                                <div className="w-10 h-10 rounded-xl bg-rose-500 flex items-center justify-center text-white shrink-0"><PackageMinus size={22} /></div>
+                                                <div className="text-left">
+                                                    <p className="font-black text-slate-900 text-sm">เบิกออก</p>
+                                                    <p className="text-xs text-slate-500">นำออก/เบิกใช้</p>
+                                                </div>
+                                            </button>
+                                            <button
+                                                onClick={() => { setQuickActionOpen(false); openModal('transfer'); }}
+                                                className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50 border-2 border-blue-100 hover:border-blue-300 active:bg-blue-100 transition-all"
+                                            >
+                                                <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white shrink-0"><ArrowLeftRight size={22} /></div>
+                                                <div className="text-left">
+                                                    <p className="font-black text-slate-900 text-sm">โอนสินค้า</p>
+                                                    <p className="text-xs text-slate-500">ส่งไปสาขาอื่น</p>
+                                                </div>
+                                            </button>
+                                            <button
+                                                onClick={() => { setQuickActionOpen(false); setActiveTab('stocktake'); }}
+                                                className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-100 hover:border-emerald-300 active:bg-emerald-100 transition-all"
+                                            >
+                                                <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0"><ClipboardCheck size={22} /></div>
+                                                <div className="text-left">
+                                                    <p className="font-black text-slate-900 text-sm">นับสต็อก</p>
+                                                    <p className="text-xs text-slate-500">ตรวจนับจริง</p>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {/* Bottom Nav Bar */}
+                            <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] safe-area-bottom">
+                                <div className="flex items-stretch h-[64px]">
+                                    <button
+                                        onClick={() => { setQuickActionOpen(false); goTab('dashboard'); }}
+                                        className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${activeTab === 'dashboard' ? 'text-orange-500' : 'text-slate-400'}`}
+                                    >
+                                        <LayoutDashboard size={22} />
+                                        <span className="text-[10px] font-bold">หน้าแรก</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setQuickActionOpen(false); goTab('inventory'); }}
+                                        className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${activeTab === 'inventory' ? 'text-orange-500' : 'text-slate-400'}`}
+                                    >
+                                        <Boxes size={22} />
+                                        <span className="text-[10px] font-bold">คลัง</span>
+                                    </button>
+                                    {user?.role !== 'viewer' && (
+                                        <button
+                                            onClick={() => setQuickActionOpen(prev => !prev)}
+                                            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-all`}
+                                        >
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all ${quickActionOpen ? 'bg-slate-800 rotate-45' : 'bg-orange-500'}`}>
+                                                <Plus size={26} className="text-white" strokeWidth={2.5} />
+                                            </div>
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => { setQuickActionOpen(false); goTab('history'); }}
+                                        className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${activeTab === 'history' ? 'text-orange-500' : 'text-slate-400'}`}
+                                    >
+                                        <History size={22} />
+                                        <span className="text-[10px] font-bold">ประวัติ</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setQuickActionOpen(false); setSidebarOpen(true); }}
+                                        className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400"
+                                    >
+                                        <LayoutGrid size={22} />
+                                        <span className="text-[10px] font-bold">เมนู</span>
+                                    </button>
+                                </div>
+                            </nav>
+                        </>
+                    )}
+
                     {/* Main Content */}
-                    <main className="flex-1 min-w-0 p-4 md:p-10 overflow-y-auto">
+                    <main className="flex-1 min-w-0 p-4 md:p-10 overflow-y-auto pb-24 md:pb-10">
                         {/* Mobile: sticky header with hamburger + branch bar */}
                         <div className="sticky top-0 z-30 bg-slate-50 -mx-4 px-4 pt-2 pb-3 md:mx-0 md:px-0 md:pt-0 md:pb-0 md:static md:bg-transparent mb-4 md:mb-0">
                             <div className="flex items-center gap-3 md:hidden">
@@ -2667,6 +2803,16 @@
                                 )}
                             </div>
                         </div>
+                        {/* Loading banner: แสดงขณะ phase 2 (inventory+transactions) กำลังโหลด */}
+                        {!inventoryLoaded && token && !isLoading && (
+                            <div className="banner-in mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800">
+                                <div className="shrink-0 w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                                <div className="min-w-0">
+                                    <p className="font-bold text-sm leading-tight">กำลังโหลดสต็อกและประวัติ...</p>
+                                    <p className="text-xs text-amber-600 leading-tight mt-0.5">ข้อมูลสต็อกจะพร้อมใช้งานในไม่ช้า</p>
+                                </div>
+                            </div>
+                        )}
                         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 md:mb-10 gap-4 md:gap-6">
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -4136,7 +4282,15 @@
                     {/* Modal นำเข้า / โอน / เบิก */}
                     {showModal && (
                         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
-                            <div className="bg-white rounded-t-3xl sm:rounded-[32px] w-full sm:max-w-2xl max-h-[95vh] overflow-hidden shadow-2xl flex flex-col">
+                            <div className="bg-white rounded-t-3xl sm:rounded-[32px] w-full sm:max-w-2xl max-h-[95vh] overflow-hidden shadow-2xl flex flex-col relative">
+                                {/* Saving overlay */}
+                                {isSaving && (
+                                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-4 rounded-t-3xl sm:rounded-[32px]">
+                                        <div className="loader" style={{width:'48px',height:'48px',borderWidth:'5px'}}></div>
+                                        <p className="font-black text-lg text-slate-700 saving-pulse">กำลังบันทึก...</p>
+                                        <p className="text-sm text-slate-500">กรุณารอสักครู่</p>
+                                    </div>
+                                )}
                                 <div className={`p-5 sm:p-6 text-white ${modalType === 'in' ? 'bg-orange-500' : modalType === 'transfer' ? 'bg-blue-500' : 'bg-rose-500'} flex justify-between items-start shrink-0`}>
                                     <div className="min-w-0 flex-1">
                                         <h3 className="text-xl sm:text-2xl font-semibold">{modalType === 'in' ? 'นำเข้าสินค้า' : modalType === 'transfer' ? 'โอนสินค้า' : 'เบิกออก'}</h3>
@@ -4346,7 +4500,13 @@
                     {/* Item Modal (Add/Edit) */}
                     {showItemModal && (
                         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
-                            <div className="bg-white rounded-t-3xl sm:rounded-[32px] w-full sm:max-w-lg overflow-hidden shadow-2xl">
+                            <div className="bg-white rounded-t-3xl sm:rounded-[32px] w-full sm:max-w-lg overflow-hidden shadow-2xl relative">
+                                {isSaving && (
+                                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-4 rounded-t-3xl sm:rounded-[32px]">
+                                        <div className="loader" style={{width:'48px',height:'48px',borderWidth:'5px'}}></div>
+                                        <p className="font-black text-lg text-slate-700 saving-pulse">กำลังบันทึก...</p>
+                                    </div>
+                                )}
                                 <div className="p-6 sm:p-8 bg-orange-500 text-white flex justify-between items-center">
                                     <h3 className="text-xl sm:text-2xl font-black">{editingItem ? 'แก้ไขสินค้า' : 'เพิ่มสินค้า'}</h3>
                                     <button onClick={() => { setShowItemModal(false); setShowItemSupplierModal(false); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-all" aria-label="ปิด">✕</button>
@@ -4650,8 +4810,29 @@
 
                     {/* Toast — แจ้งผลแบบไม่ block UI */}
                     {toast.show && (
-                        <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-2xl text-white font-bold shadow-lg toast-in ${toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`}>
-                            {toast.message}
+                        <div
+                            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] toast-in
+                                flex items-center gap-3 px-5 py-4 rounded-2xl text-white font-bold shadow-2xl
+                                min-w-[280px] max-w-[90vw] md:max-w-md
+                                ${toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`}
+                            role="alert"
+                            aria-live="polite"
+                        >
+                            <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${toast.type === 'error' ? 'bg-rose-500' : 'bg-emerald-500'}`}>
+                                {toast.type === 'error'
+                                    ? <X size={18} strokeWidth={3} />
+                                    : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                }
+                            </div>
+                            <span className="flex-1 text-sm md:text-base leading-snug">{toast.message}</span>
+                            <button
+                                type="button"
+                                onClick={() => setToast(prev => ({ ...prev, show: false }))}
+                                className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity"
+                                aria-label="ปิด"
+                            >
+                                <X size={15} strokeWidth={2.5} />
+                            </button>
                         </div>
                     )}
 

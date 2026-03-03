@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kostock Inventory</title>
+    <title>FoodStock — ระบบจัดการสต็อก</title>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
+        * { box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; }
 
         iframe {
             width: 100%;
@@ -17,92 +18,192 @@
 
         .loading {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: #fff;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            transition: opacity 0.3s;
+            gap: 0;
+            transition: opacity 0.4s ease;
         }
         .loading.hidden { opacity: 0; pointer-events: none; }
+
+        /* Logo area */
+        .loading-logo {
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, #fb923c, #ea580c);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(249, 115, 22, 0.35);
+            animation: logoPulse 2s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 8px 32px rgba(249, 115, 22, 0.35); }
+            50% { box-shadow: 0 12px 48px rgba(249, 115, 22, 0.55); }
+        }
+        .loading-logo svg {
+            width: 36px; height: 36px;
+            stroke: white; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        .loading-title {
+            font-size: 26px;
+            font-weight: 900;
+            color: #0f172a;
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+        }
+        .loading-badge {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 28px;
+        }
+
+        /* Spinner */
         .loading-spinner {
-            width: 44px;
-            height: 44px;
-            border: 3px solid #e8f0fe;
-            border-top-color: #1a73e8;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #fed7aa;
+            border-top-color: #f97316;
             border-radius: 50%;
-            animation: spin 0.7s linear infinite;
+            animation: spin 0.75s linear infinite;
+            margin-bottom: 16px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .loading-text { color: #333; font-size: 15px; font-weight: 500; }
-        .loading-sub { color: #888; font-size: 13px; margin-top: 4px; }
-        .loading-dots::after {
-            content: '';
-            animation: dots 1.2s steps(4, end) infinite;
+
+        /* Stage text */
+        .loading-stage {
+            font-size: 15px;
+            font-weight: 700;
+            color: #374151;
+            min-height: 22px;
+            text-align: center;
+            transition: opacity 0.3s;
         }
-        @keyframes dots {
-            0%, 20% { content: ''; }
-            40% { content: '.'; }
-            60% { content: '..'; }
-            80%, 100% { content: '...'; }
+        .loading-stage.fading { opacity: 0; }
+        .loading-sub {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 6px;
+            text-align: center;
+            max-width: 280px;
+            line-height: 1.5;
         }
+
+        /* Progress bar */
         .loading-bar {
-            width: 180px;
+            width: 200px;
             height: 4px;
-            background: #e8f0fe;
-            border-radius: 2px;
+            background: #fed7aa;
+            border-radius: 4px;
             overflow: hidden;
-            margin-top: 16px;
+            margin-top: 20px;
         }
         .loading-bar-inner {
             height: 100%;
-            width: 40%;
-            background: #1a73e8;
-            border-radius: 2px;
-            animation: bar 1.2s ease-in-out infinite;
+            width: 35%;
+            background: linear-gradient(90deg, #fb923c, #f97316);
+            border-radius: 4px;
+            animation: bar 1.4s ease-in-out infinite;
         }
         @keyframes bar {
             0% { transform: translateX(-100%); }
-            50% { transform: translateX(150%); }
+            50% { transform: translateX(200%); }
             100% { transform: translateX(-100%); }
         }
+
+        /* Slow-load warning */
+        .loading-warn {
+            font-size: 11px;
+            color: #d97706;
+            margin-top: 14px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .loading-warn.visible { opacity: 1; }
     </style>
 </head>
 <body>
     <div class="loading" id="loading">
+        <!-- Brand logo -->
+        <div class="loading-logo">
+            <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        </div>
+        <div class="loading-title">FoodStock</div>
+        <div class="loading-badge">Enterprise Hub</div>
+
         <div class="loading-spinner"></div>
-        <span class="loading-text loading-dots">กำลังเตรียมระบบ</span>
-        <span class="loading-sub">กรุณารอสักครู่ (หากโหลดเกิน 15 วินาที ระบบจะแสดงหน้าถัดไปอัตโนมัติ)</span>
+        <div class="loading-stage" id="stage-text">เชื่อมต่อเซิร์ฟเวอร์...</div>
+        <div class="loading-sub" id="stage-sub">กำลังเปิดใช้งาน Google Apps Script</div>
+
         <div class="loading-bar"><div class="loading-bar-inner"></div></div>
+        <div class="loading-warn" id="slow-warn">ระบบใช้เวลาโหลดนานกว่าปกติ กรุณารอสักครู่...</div>
     </div>
 
     <iframe
         id="gas-frame"
         src="__GAS_URL__"
-        title="Kostock Inventory"
+        title="FoodStock Inventory"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
         allow="fullscreen"
-   ></iframe>
+    ></iframe>
 
     <script>
         (function () {
             var frame = document.getElementById('gas-frame');
             var loading = document.getElementById('loading');
+            var stageText = document.getElementById('stage-text');
+            var stageSub = document.getElementById('stage-sub');
+            var slowWarn = document.getElementById('slow-warn');
+
             var gasUrl = frame.getAttribute('src');
             if (!gasUrl || gasUrl === '__GAS_URL__') {
                 loading.classList.add('hidden');
                 return;
             }
+
+            // Animated stage messages
+            var stages = [
+                { text: 'เชื่อมต่อเซิร์ฟเวอร์...', sub: 'กำลังเปิดใช้งาน Google Apps Script' },
+                { text: 'กำลังโหลดข้อมูล...', sub: 'รับข้อมูลจาก Google Sheets' },
+                { text: 'เตรียมระบบสต็อก...', sub: 'กำลังจัดเตรียมข้อมูลสินค้า' },
+                { text: 'เกือบพร้อมแล้ว...', sub: 'กรุณารอสักครู่' },
+            ];
+            var stageIndex = 0;
+            var stageTimer = setInterval(function () {
+                stageIndex++;
+                if (stageIndex >= stages.length) { clearInterval(stageTimer); return; }
+                stageText.classList.add('fading');
+                setTimeout(function () {
+                    stageText.textContent = stages[stageIndex].text;
+                    stageSub.textContent = stages[stageIndex].sub;
+                    stageText.classList.remove('fading');
+                }, 300);
+            }, 3500);
+
+            // Slow-load warning after 8s
+            var warnTimer = setTimeout(function () {
+                slowWarn.classList.add('visible');
+            }, 8000);
+
             function hideLoading() {
+                clearInterval(stageTimer);
+                clearTimeout(warnTimer);
                 loading.classList.add('hidden');
             }
+
             frame.addEventListener('load', hideLoading);
-            setTimeout(hideLoading, 15000);
+            setTimeout(hideLoading, 20000);
         })();
     </script>
 </body>
