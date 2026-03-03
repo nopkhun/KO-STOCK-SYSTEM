@@ -1231,29 +1231,53 @@ function saveItem(item) {
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
     const col = (k) => headers.indexOf(k);
-    const name = String(item.name || '').trim();
-    const unit = String(item.unit || 'หน่วย').trim();
-    const minStock = isNaN(Number(item.minStock)) ? 0 : Number(item.minStock);
-    const category = String(item.category || '').trim();
-    if (!name) return { success: false, error: 'กรุณากรอกชื่อสินค้า' };
+     const name = String(item.name || '').trim();
+     const unit = String(item.unit || 'หน่วย').trim();
+     const minStock = isNaN(Number(item.minStock)) ? 0 : Number(item.minStock);
+     const category = String(item.category || '').trim();
+     // customPrice: numeric override price (per customPriceUnit); empty string = use WAC
+     const customPrice = (item.customPrice !== undefined && item.customPrice !== null && item.customPrice !== '' && !isNaN(Number(item.customPrice))) ? Number(item.customPrice) : '';
+     // customPriceUnit: unit basis of customPrice — per_unit / per_gram / per_kg / per_piece
+     const VALID_CPU = ['per_unit', 'per_gram', 'per_kg', 'per_piece'];
+     const customPriceUnit = (customPrice !== '' && item.customPriceUnit && VALID_CPU.includes(String(item.customPriceUnit))) ? String(item.customPriceUnit) : (customPrice !== '' ? 'per_unit' : '');
+     if (!name) return { success: false, error: 'กรุณากรอกชื่อสินค้า' };
 
-    const id = item.id;
-    if (id) {
-      for (let i = 1; i < data.length; i++) {
-        if (String(data[i][col('id')]) === String(id)) {
-          sheet.getRange(i + 1, col('name') + 1).setValue(name);
-          sheet.getRange(i + 1, col('unit') + 1).setValue(unit);
-          sheet.getRange(i + 1, col('minStock') + 1).setValue(minStock);
-          sheet.getRange(i + 1, col('category') + 1).setValue(category);
-          writeAuditLog(ctx.userId, ctx.username, 'update', 'item', id, name);
-          return { success: true, id: id, message: 'แก้ไขแล้ว' };
-        }
-      }
-    }
-    const newId = 'I-' + Date.now();
-    sheet.appendRow([newId, name, unit, minStock, category]);
-    writeAuditLog(ctx.userId, ctx.username, 'create', 'item', newId, name);
-    return { success: true, id: newId, message: 'เพิ่มแล้ว' };
+     const id = item.id;
+     if (id) {
+       for (let i = 1; i < data.length; i++) {
+         if (String(data[i][col('id')]) === String(id)) {
+           sheet.getRange(i + 1, col('name') + 1).setValue(name);
+           sheet.getRange(i + 1, col('unit') + 1).setValue(unit);
+           sheet.getRange(i + 1, col('minStock') + 1).setValue(minStock);
+           sheet.getRange(i + 1, col('category') + 1).setValue(category);
+           // Write customPrice / customPriceUnit columns (added by ensureItemPriceColumns)
+           const cpIdx = col('customPrice');
+           const cpuIdx = col('customPriceUnit');
+           if (cpIdx >= 0) sheet.getRange(i + 1, cpIdx + 1).setValue(customPrice);
+           if (cpuIdx >= 0) sheet.getRange(i + 1, cpuIdx + 1).setValue(customPriceUnit);
+           writeAuditLog(ctx.userId, ctx.username, 'update', 'item', id, name);
+           return { success: true, id: id, message: 'แก้ไขแล้ว' };
+         }
+       }
+     }
+     const newId = 'I-' + Date.now();
+     // Append row; include customPrice/customPriceUnit if columns already exist
+     const cpIdxNew = col('customPrice');
+     const cpuIdxNew = col('customPriceUnit');
+     if (cpIdxNew >= 0) {
+       const newRow = [newId, name, unit, minStock, category];
+       while (newRow.length < cpIdxNew) newRow.push('');
+       newRow[cpIdxNew] = customPrice;
+       if (cpuIdxNew >= 0) {
+         while (newRow.length <= cpuIdxNew) newRow.push('');
+         newRow[cpuIdxNew] = customPriceUnit;
+       }
+       sheet.appendRow(newRow);
+     } else {
+       sheet.appendRow([newId, name, unit, minStock, category]);
+     }
+     writeAuditLog(ctx.userId, ctx.username, 'create', 'item', newId, name);
+     return { success: true, id: newId, message: 'เพิ่มแล้ว' };
   } catch (e) {
     return { success: false, error: e.toString() };
   } finally {
@@ -2086,6 +2110,27 @@ function ensurePricingColumns(ss) {
   if (txH.indexOf('branchid') < 0) {
     tx.getRange(1, tx.getLastColumn() + 1).setValue('branchId');
     Logger.log('Transactions: added branchId column');
+  }
+  // Ensure Items sheet has customPrice + customPriceUnit columns
+  ensureItemPriceColumns(ss);
+}
+
+// Add customPrice and customPriceUnit columns to Items sheet if missing
+function ensureItemPriceColumns(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  var items = ss.getSheetByName('Items');
+  if (!items) return;
+  var last = items.getLastColumn();
+  var headers = items.getRange(1, 1, 1, last).getValues()[0].map(function(h) { return String(h || '').trim().toLowerCase(); });
+  if (headers.indexOf('customprice') < 0) {
+    items.getRange(1, last + 1).setValue('customPrice');
+    last++;
+    headers.push('customprice');
+    Logger.log('Items: added customPrice column');
+  }
+  if (headers.indexOf('custompriceunit') < 0) {
+    items.getRange(1, last + 1).setValue('customPriceUnit');
+    Logger.log('Items: added customPriceUnit column');
   }
 }
 

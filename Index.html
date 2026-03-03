@@ -301,7 +301,7 @@
             const [modalBranchSearch, setModalBranchSearch] = useState('');
 
             // Master data forms (Items / Branches / Units / Categories CRUD)
-            const [itemForm, setItemForm] = useState({ id: '', name: '', unit: '', minStock: '', category: '' });
+            const [itemForm, setItemForm] = useState({ id: '', name: '', unit: '', minStock: '', category: '', customPrice: '', customPriceUnit: 'per_unit' });
             const [branchForm, setBranchForm] = useState({ id: '', name: '', isHQ: false });
             const [unitForm, setUnitForm] = useState({ id: '', name: '' });
             const [categoryForm, setCategoryForm] = useState({ id: '', name: '' });
@@ -812,17 +812,39 @@
                 return byId;
             }, [transactions, itemsMaster]);
 
+            // effectivePriceByItemId: use customPrice (with unit conversion) if set, otherwise fall back to WAC
+            const effectivePriceByItemId = useMemo(() => {
+                const result = { ...wacByItemId }; // start from WAC
+                itemsMaster.forEach(item => {
+                    const cp = item.customPrice != null && item.customPrice !== '' && !isNaN(Number(item.customPrice)) ? Number(item.customPrice) : null;
+                    if (cp == null) return;
+                    const cpu = item.customPriceUnit || 'per_unit';
+                    const stockUnit = String(item.unit || '').trim().toLowerCase();
+                    let factor = 1;
+                    if (cpu === 'per_gram') {
+                        // price per gram → price per stock unit (if stock unit is kg)
+                        if (stockUnit === 'กก.' || stockUnit === 'kg' || stockUnit === 'กิโลกรัม') factor = 1000;
+                    } else if (cpu === 'per_kg') {
+                        // price per kg → price per stock unit (if stock unit is g/gram)
+                        if (stockUnit === 'ก.' || stockUnit === 'g' || stockUnit === 'กรัม') factor = 0.001;
+                    }
+                    // per_unit / per_piece → factor = 1
+                    result[item.id] = cp * factor;
+                });
+                return result;
+            }, [wacByItemId, itemsMaster]);
+
             const costCalcIngredientTotal = useMemo(() => {
                 let sum = 0;
                 costCalcIngredients.forEach(row => {
                     const qty = parseFloat(row.qty) || 0;
                     let up = 0;
-                    if (row.type === 'system' && row.itemId && wacByItemId[row.itemId] != null) up = wacByItemId[row.itemId];
+                    if (row.type === 'system' && row.itemId && effectivePriceByItemId[row.itemId] != null) up = effectivePriceByItemId[row.itemId];
                     else if (row.type === 'manual' && row.unitPrice != null && !isNaN(Number(row.unitPrice))) up = Number(row.unitPrice);
                     sum += up * qty;
                 });
                 return sum;
-            }, [costCalcIngredients, wacByItemId]);
+            }, [costCalcIngredients, effectivePriceByItemId]);
             const costCalcOverheadPercentSum = useMemo(() => costCalcOverheads.filter(o => o.type === 'percent').reduce((s, o) => s + (parseFloat(o.value) || 0), 0), [costCalcOverheads]);
             const costCalcOverheadFixedSum = useMemo(() => costCalcOverheads.filter(o => o.type === 'fixed').reduce((s, o) => s + (parseFloat(o.value) || 0), 0), [costCalcOverheads]);
             const costCalcOverheadTotal = useMemo(() => costCalcIngredientTotal * (costCalcOverheadPercentSum / 100) + costCalcOverheadFixedSum, [costCalcIngredientTotal, costCalcOverheadPercentSum, costCalcOverheadFixedSum]);
@@ -1104,13 +1126,15 @@
                     Object.keys(stock[branchId] || {}).forEach(itemId => {
                         (stock[branchId][itemId] || []).forEach(lot => {
                             const qty = Number(lot.remainingQty) || 0;
-                            const up = lot.unitPrice != null && !isNaN(Number(lot.unitPrice)) ? Number(lot.unitPrice) : 0;
+                            // use effectivePriceByItemId (customPrice or WAC) if available, else fall back to lot.unitPrice
+                            const ep = effectivePriceByItemId[itemId];
+                            const up = ep != null ? ep : (lot.unitPrice != null && !isNaN(Number(lot.unitPrice)) ? Number(lot.unitPrice) : 0);
                             sum += qty * up;
                         });
                     });
                 });
                 return sum;
-            }, [stock]);
+            }, [stock, effectivePriceByItemId]);
             const valueReportDailyPurchases = useMemo(() => {
                 const byDate = {};
                 (transactions || []).filter(t => t.type === 'in').forEach(tx => {
@@ -1140,9 +1164,10 @@
                         if (!byItem[itemId]) {
                             byItem[itemId] = { itemId, itemName, itemUnit, catName, totalQty: 0, totalValue: 0, branches: {} };
                         }
+                        const ep = effectivePriceByItemId[itemId];
                         (stock[branchId][itemId] || []).forEach(lot => {
                             const qty = Number(lot.remainingQty) || 0;
-                            const up = lot.unitPrice != null && !isNaN(Number(lot.unitPrice)) ? Number(lot.unitPrice) : 0;
+                            const up = ep != null ? ep : (lot.unitPrice != null && !isNaN(Number(lot.unitPrice)) ? Number(lot.unitPrice) : 0);
                             byItem[itemId].totalQty += qty;
                             byItem[itemId].totalValue += qty * up;
                             if (!byItem[itemId].branches[branchId]) {
@@ -1154,7 +1179,7 @@
                     });
                 });
                 return Object.values(byItem).filter(r => r.totalQty > 0).sort((a, b) => b.totalValue - a.totalValue);
-            }, [stock, itemsMaster, branchesMaster]);
+            }, [stock, itemsMaster, branchesMaster, effectivePriceByItemId]);
 
             // Value Report: stock value breakdown by branch
             const valueReportByBranch = useMemo(() => {
@@ -1165,16 +1190,17 @@
                     if (!byBranch[branchId]) byBranch[branchId] = { branchId, branchName, totalValue: 0, itemCount: 0 };
                     Object.keys(stock[branchId] || {}).forEach(itemId => {
                         let hasQty = false;
+                        const ep = effectivePriceByItemId[itemId];
                         (stock[branchId][itemId] || []).forEach(lot => {
                             const qty = Number(lot.remainingQty) || 0;
-                            const up = lot.unitPrice != null && !isNaN(Number(lot.unitPrice)) ? Number(lot.unitPrice) : 0;
+                            const up = ep != null ? ep : (lot.unitPrice != null && !isNaN(Number(lot.unitPrice)) ? Number(lot.unitPrice) : 0);
                             if (qty > 0) { byBranch[branchId].totalValue += qty * up; hasQty = true; }
                         });
                         if (hasQty) byBranch[branchId].itemCount += 1;
                     });
                 });
                 return Object.values(byBranch).filter(r => r.totalValue > 0).sort((a, b) => b.totalValue - a.totalValue);
-            }, [stock, branchesMaster]);
+            }, [stock, branchesMaster, effectivePriceByItemId]);
 
             // Value Report: purchase total this month
             const valueReportThisMonthPurchase = useMemo(() => {
@@ -1957,13 +1983,13 @@
 
             const openItemModal = (item = null) => {
                 setEditingItem(item || null);
-                setItemForm(item ? { id: item.id, name: item.name, unit: item.unit || '', minStock: item.minStock != null ? Number(item.minStock) : '', category: item.category || '' } : { id: '', name: '', unit: '', minStock: '', category: '' });
+                setItemForm(item ? { id: item.id, name: item.name, unit: item.unit || '', minStock: item.minStock != null ? Number(item.minStock) : '', category: item.category || '', customPrice: item.customPrice != null && item.customPrice !== '' ? item.customPrice : '', customPriceUnit: item.customPriceUnit || 'per_unit' } : { id: '', name: '', unit: '', minStock: '', category: '', customPrice: '', customPriceUnit: 'per_unit' });
                 setShowItemModal(true);
             };
 
             const openItemModalAsCopy = (item) => {
                 setEditingItem(null);
-                setItemForm({ id: '', name: `${String(item.name ?? '').trim()} (สำเนา)`, unit: item.unit || '', minStock: item.minStock != null ? Number(item.minStock) : 0, category: item.category || '' });
+                setItemForm({ id: '', name: `${String(item.name ?? '').trim()} (สำเนา)`, unit: item.unit || '', minStock: item.minStock != null ? Number(item.minStock) : 0, category: item.category || '', customPrice: '', customPriceUnit: 'per_unit' });
                 setShowItemModal(true);
             };
 
@@ -2035,11 +2061,12 @@
             const handleSaveItem = () => {
                 if (!itemFormValid) { showError('กรุณากรอกข้อมูลให้ครบ: ชื่อสินค้า, หน่วย, ขั้นต่ำ (≥0), หมวดหมู่'); return; }
                 setIsSaving(true);
-                const payload = { ...itemForm, id: editingItem ? itemForm.id : undefined, minStock: Number(itemForm.minStock) || 0, token };
+                const cpVal = itemForm.customPrice !== '' && itemForm.customPrice != null && !isNaN(Number(itemForm.customPrice)) ? Number(itemForm.customPrice) : null;
+                const payload = { ...itemForm, id: editingItem ? itemForm.id : undefined, minStock: Number(itemForm.minStock) || 0, customPrice: cpVal, customPriceUnit: cpVal != null ? (itemForm.customPriceUnit || 'per_unit') : null, token };
                 google.script.run
                     .withSuccessHandler((res) => {
                         if (res.success) {
-                            const next = { id: res.id, name: payload.name, unit: payload.unit, minStock: payload.minStock, category: payload.category };
+                            const next = { id: res.id, name: payload.name, unit: payload.unit, minStock: payload.minStock, category: payload.category, customPrice: payload.customPrice, customPriceUnit: payload.customPriceUnit };
                             if (editingItem) {
                                 setItemsMaster(prev => prev.map(i => i.id === editingItem.id ? next : i));
                             } else {
@@ -3523,7 +3550,19 @@
                                                         <td className="px-6 py-4 text-slate-600">{i.unit || 'หน่วย'}</td>
                                                         <td className="px-6 py-4">{i.minStock ?? 0}</td>
                                                         <td className="px-6 py-4 text-orange-500 font-medium">{i.category || '-'}</td>
-                                                        <td className="px-6 py-4 text-right">{wacByItemId[i.id] != null ? <span className="font-bold text-emerald-600">{(wacByItemId[i.id]).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</span> : <span className="text-slate-300">—</span>}</td>
+                                                         <td className="px-6 py-4 text-right">
+                                                            {(() => {
+                                                                const hasCustom = i.customPrice != null && i.customPrice !== '' && !isNaN(Number(i.customPrice));
+                                                                const ep = effectivePriceByItemId[i.id];
+                                                                if (ep != null) return (
+                                                                    <span className={`font-bold ${hasCustom ? 'text-orange-600' : 'text-emerald-600'}`}>
+                                                                        {ep.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
+                                                                        {hasCustom && <span className="ml-1 text-[10px] font-normal bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">กำหนดเอง</span>}
+                                                                    </span>
+                                                                );
+                                                                return <span className="text-slate-300">—</span>;
+                                                            })()}
+                                                        </td>
                                                         <td className="px-6 py-4 text-right">
                                                             <div className="flex justify-end gap-2">
                                                                 <button onClick={() => openItemModalAsCopy(i)} className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-blue-500 hover:text-white transition-all" aria-label="คัดลอก"><Copy size={18} /></button>
@@ -3541,8 +3580,18 @@
                                             <div key={i.id} className="p-4 flex flex-wrap items-center justify-between gap-3">
                                                 <div>
                                                     <p className="font-bold text-slate-900">{i.name}</p>
-                                                    <p className="text-sm text-slate-500">{i.unit || 'หน่วย'} · ขั้นต่ำ {i.minStock ?? 0} · {i.category || '-'}</p>
-                                                    {wacByItemId[i.id] != null && <p className="text-sm font-bold text-emerald-600 mt-1">ต้นทุนเฉลี่ย {(wacByItemId[i.id]).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</p>}
+                                                     <p className="text-sm text-slate-500">{i.unit || 'หน่วย'} · ขั้นต่ำ {i.minStock ?? 0} · {i.category || '-'}</p>
+                                                    {(() => {
+                                                        const hasCustom = i.customPrice != null && i.customPrice !== '' && !isNaN(Number(i.customPrice));
+                                                        const ep = effectivePriceByItemId[i.id];
+                                                        if (ep == null) return null;
+                                                        return (
+                                                            <p className={`text-sm font-bold mt-1 ${hasCustom ? 'text-orange-600' : 'text-emerald-600'}`}>
+                                                                ต้นทุนเฉลี่ย {ep.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
+                                                                {hasCustom && <span className="ml-1 text-[10px] font-normal bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">กำหนดเอง</span>}
+                                                            </p>
+                                                        );
+                                                    })()}
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button onClick={() => openItemModalAsCopy(i)} className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-blue-500 hover:text-white transition-all" aria-label="คัดลอก"><Copy size={18} /></button>
@@ -4333,6 +4382,65 @@
                                             {categoriesMaster.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                                         </select>
                                         {!String(itemForm.category || '').trim() && <p className="text-rose-500 text-xs mt-1">กรุณาเลือกหมวดหมู่</p>}
+                                    </div>
+                                    {/* Custom Price Section */}
+                                    <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-slate-50/50">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-sm font-bold text-slate-700">ราคาที่ใช้คำนวณ <span className="font-normal text-slate-400">(ไม่บังคับ)</span></label>
+                                            {itemForm.customPrice !== '' && itemForm.customPrice != null && (
+                                                <button type="button" onClick={() => setItemForm({ ...itemForm, customPrice: '', customPriceUnit: 'per_unit' })} className="text-xs text-rose-500 hover:text-rose-600 font-bold">ล้างค่า (ใช้ WAC)</button>
+                                            )}
+                                        </div>
+                                        {(() => {
+                                            const wac = editingItem ? wacByItemId[editingItem.id] : null;
+                                            return (
+                                                <p className="text-xs text-slate-400">
+                                                    WAC ปัจจุบัน: {wac != null ? `${wac.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท/${itemForm.unit || 'หน่วย'}` : 'ยังไม่มีข้อมูล (ไม่มีการนำเข้า)'}
+                                                </p>
+                                            );
+                                        })()}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-600 mb-1">ราคา (บาท)</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={itemForm.customPrice}
+                                                    onChange={e => setItemForm({ ...itemForm, customPrice: e.target.value })}
+                                                    placeholder={editingItem && wacByItemId[editingItem.id] != null ? wacByItemId[editingItem.id].toFixed(2) : 'เช่น 45.00'}
+                                                    className="w-full min-h-[44px] px-3 py-2 bg-white rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500 text-base"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-600 mb-1">ต่อ</label>
+                                                <select value={itemForm.customPriceUnit} onChange={e => setItemForm({ ...itemForm, customPriceUnit: e.target.value })} className="w-full min-h-[44px] px-3 py-2 bg-white rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500 text-base">
+                                                    <option value="per_unit">หน่วย (ตาม stock)</option>
+                                                    <option value="per_piece">ชิ้น</option>
+                                                    <option value="per_gram">กรัม (g)</option>
+                                                    <option value="per_kg">กิโลกรัม (kg)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        {itemForm.customPrice !== '' && itemForm.customPrice != null && !isNaN(Number(itemForm.customPrice)) && Number(itemForm.customPrice) > 0 && (() => {
+                                            const cp = Number(itemForm.customPrice);
+                                            const cpu = itemForm.customPriceUnit || 'per_unit';
+                                            const stockUnit = String(itemForm.unit || '').trim().toLowerCase();
+                                            let factor = 1;
+                                            if (cpu === 'per_gram') {
+                                                if (stockUnit === 'กก.' || stockUnit === 'kg' || stockUnit === 'กิโลกรัม') factor = 1000;
+                                            } else if (cpu === 'per_kg') {
+                                                if (stockUnit === 'ก.' || stockUnit === 'g' || stockUnit === 'กรัม') factor = 0.001;
+                                            }
+                                            const effective = cp * factor;
+                                            const unitLabel = { per_unit: 'หน่วย (stock)', per_piece: 'ชิ้น', per_gram: 'กรัม', per_kg: 'กิโลกรัม' }[cpu] || cpu;
+                                            return (
+                                                <p className="text-xs text-orange-600 font-bold">
+                                                    ราคาที่จะใช้: {effective.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} บาท/{itemForm.unit || 'หน่วย'}
+                                                    {factor !== 1 && ` (${cp.toFixed(2)} บาท/${unitLabel} × ${factor})`}
+                                                </p>
+                                            );
+                                        })()}
                                     </div>
                                     {editingItem && (
                                         <div className="border-t border-slate-100 pt-4">
