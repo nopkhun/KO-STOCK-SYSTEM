@@ -1,147 +1,52 @@
-# 🏪 KO Stock System
+# KO-Stock-System (FoodStock Manager) 📦
 
-> ระบบจัดการคลังสินค้าและวัตถุดิบสำหรับร้านอาหาร / F&B  
-> สร้างด้วย Google Apps Script + Google Sheets + React
+ระบบจัดการสต็อกวัตถุดิบและคำนวณต้นทุนอาหาร สำหรับร้านอาหารและธุรกิจ F&B พัฒนาด้วย **Google Apps Script (GAS)** และ **React**
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![Platform](https://img.shields.io/badge/platform-Google%20Apps%20Script-orange)
-![License](https://img.shields.io/badge/license-MIT-green)
+> **"Type Once, Have it all!"** — จัดการคลังสินค้าแบบ FIFO, โอนย้ายระหว่างสาขา, และวิเคราะห์ต้นทุนได้ในที่เดียว
 
 ---
 
 ## ✨ Features
 
-| หมวด | ความสามารถ |
-|------|-----------|
-| 📦 **นำเข้าสินค้า** | รับสินค้าหลายรายการพร้อมกัน, เลือกคู่ค้า, ราคาต่อหน่วย, วันหมดอายุ |
-| 📤 **เบิกสินค้า** | FIFO deduction อัตโนมัติ, ระบุเหตุผล, คำนวณมูลค่าต้นทุน |
-| 🔄 **โอนสินค้า** | โอนระหว่างสาขา, หักสต็อกต้นทาง-เพิ่มปลายทางอัตโนมัติ |
-| 📊 **ปรับยอดสต็อก** | ตรวจนับสต็อกจริง เปรียบเทียบกับระบบ, ปรับด้วย FIFO |
-| 🏬 **Multi-branch** | รองรับหลายสาขา, แสดงสต็อกแยกสาขา |
-| 📈 **รายงาน** | สรุปสต็อก, ประวัติเข้าออก, รายงานราคาซื้อ, มูลค่าสต็อก, ของเสีย |
-| 🍽️ **ต้นทุนอาหาร** | คำนวณต้นทุนเมนู, WAC วัตถุดิบ, ราคาขายแนะนำ |
-| 👥 **Multi-user** | Role-based access (Master / Admin / Viewer), ประวัติการใช้งาน |
+### 🛒 การจัดการสต็อก (Inventory Management)
+- **ระบบ FIFO (First-In, First-Out):** ตัดสต็อกตามล็อตที่เข้าก่อน เพื่อความแม่นยำของต้นทุนและอายุการใช้งาน
+- **Multi-branch Support:** รองรับการจัดการหลายสาขา พร้อมระบบโอนย้ายสินค้า (Transfer) ระหว่างสาขา
+- **Stock Take:** ระบบตรวจนับสต็อกจริง พร้อมคำนวณส่วนต่าง (+/-) และปรับยอดอัตโนมัติ
+- **Transaction History:** บันทึกประวัติการขยับเขยื้อนของสินค้าทั้งหมด (In, Out, Transfer, Adjust) พร้อมตัวกรองละเอียด
+
+### 💰 ต้นทุนและคู่ค้า (Costing & Suppliers)
+- **Food Cost Calculator:** คำนวณต้นทุนต่อจานอัตโนมัติจากราคาวัตถุดิบเฉลี่ย (WAC)
+- **Supplier Management:** จัดการข้อมูลคู่ค้าและประวัติการซื้อ
+- **Pricing:** รองรับการบันทึกราคาซื้อและหน่วยซื้อที่แตกต่างจากหน่วยใช้งาน
+
+### 📊 รายงานและการวิเคราะห์ (Reports)
+- **Dashboard:** สรุปภาพรวมสินค้าใกล้หมด, ยอดล่วงหน้า, และความเคลื่อนไหวประจำวัน
+- **Inventory Report:** สรุปยอดคงเหลือรายสินค้าแยกตามสาขา
+- **Export CSV:** รองรับการส่งออกข้อมูลรายงานและประวัติเพื่อนำไปใช้งานต่อ
 
 ---
 
-## 🏗️ Tech Stack
+## 🛠 Tech Stack
 
-```
-Frontend  → React 18 (CDN) + Tailwind CSS + Lucide Icons + Babel Standalone
-Backend   → Google Apps Script (Code.gs)
-Database  → Google Sheets (Items, Branches, Inventory, Transactions, ...)
-Auth      → Token-based (UUID + expiry, SHA-256 password hash)
-```
+- **Backend:** Google Apps Script (GAS)
+- **Database:** Google Sheets
+- **Frontend:** React 18, Tailwind CSS, Lucide Icons, Babel (Standalone)
+- **State Management:** React Hooks (useState, useMemo, useEffect)
 
 ---
 
-## 📁 โครงสร้างไฟล์
+## 🚀 การติดตั้งและใช้งาน (Deployment)
 
-```
-KO-Stock-System/
-├── Code.gs              # Google Apps Script backend
-├── Index.html           # Single-page React frontend
-├── tests/
-│   ├── logic.test.js    # Unit tests (FIFO, date parsing)
-│   └── MANUAL-TEST-PLAN.md
-└── .toh/memory/         # Project documentation & decisions
-```
+1.  **คัดลอกไฟล์:** นำ Code จาก `Code.gs` และ `Index.html` ไปใส่ในโปรเจค Google Apps Script ใหม่
+2.  **เตรียม Google Sheets:** ระบบมีฟังก์ชัน `setupSheets` อัตโนมัติเมื่อเริ่มใช้งานครั้งแรก หรือสามารถสร้าง Sheets: `Items`, `Branches`, `Inventory`, `Transactions`, `Users`, `Tokens`, `AuditLog`, `Suppliers`, `Menus`, `MenuIngredients`, `MenuOverheads`
+3.  **Deploy:** เลือก "Deploy as Web App" ใน GAS Editor
+4.  **ตั้งค่าสิทธิ์:** กำหนดให้ "Anyone with Google Account" เข้าถึงได้
 
 ---
 
-## ⚙️ การติดตั้ง
-
-### 1. สร้าง Google Spreadsheet
-
-สร้าง Google Spreadsheet ใหม่ และสร้าง Sheets ชื่อ:
-
-| Sheet | คำอธิบาย |
-|-------|---------|
-| `Items` | รายการสินค้า/วัตถุดิบ |
-| `Branches` | รายการสาขา |
-| `Inventory` | lot-based คลังสินค้า (FIFO) |
-| `Transactions` | ประวัติเข้า-ออก-โอน-ปรับ |
-| `Units` | หน่วยสินค้า |
-| `Categories` | หมวดหมู่สินค้า |
-| `Suppliers` | คู่ค้า/ผู้จัดจำหน่าย |
-| `ItemSuppliers` | ความสัมพันธ์สินค้า-คู่ค้า |
-| `Users` | ผู้ใช้งาน (สร้างอัตโนมัติ) |
-| `Tokens` | Token สำหรับ Auth (สร้างอัตโนมัติ) |
-| `AuditLog` | ล็อกการใช้งาน (สร้างอัตโนมัติ) |
-
-### 2. สร้าง Google Apps Script Project
-
-1. เปิด Spreadsheet → **Extensions → Apps Script**
-2. ลบ code เดิม แล้ว paste `Code.gs` ทั้งหมด
-3. เพิ่มไฟล์ใหม่ชื่อ `Index.html` → paste `Index.html`
-4. Deploy → **New deployment** → เลือก **Web app**
-   - Execute as: **Me**
-   - Who has access: **Anyone** (หรือ **Anyone in your organization**)
-5. Copy URL จาก deployment
-
-### 3. เริ่มใช้งาน
-
-- เปิด URL จาก deployment
-- Login ด้วย `admin` / `admin123` (ครั้งแรก ระบบจะให้เปลี่ยนรหัสผ่าน)
-- ตั้งค่าระบบ: เพิ่มหน่วย, หมวดหมู่, สาขา, สินค้า
+## 📄 License & Version
+- **Version:** 2025.02.05.FINAL (Logic Audit Patched)
+- **Framework:** Toh Framework (AODD)
 
 ---
-
-## 📦 Inventory Logic (FIFO)
-
-ระบบใช้ **FIFO (First In, First Out)** สำหรับการตัดสต็อก:
-
-```
-Lot เก่าสุด → ตัดก่อน → Lot ใหม่กว่า → ตัดหลัง
-```
-
-- **In:** สร้าง Lot ใหม่ใน Inventory sheet
-- **Out:** ตัด Lot เก่าก่อน (FIFO), คำนวณ `outValue = qty × unitPrice`
-- **Transfer:** ตัดจากต้นทาง (FIFO) + เพิ่ม Lot ใหม่ที่ปลายทาง
-- **Adjust:** ถ้ายอดจริงน้อยกว่าระบบ → FIFO deduct; ถ้ามากกว่า → เพิ่ม Lot ใหม่
-
----
-
-## 🧪 Running Tests
-
-```bash
-node tests/logic.test.js
-```
-
-```
-✅ All 12 logic tests passed.
-```
-
----
-
-## 🔒 Security
-
-- Password hashed ด้วย SHA-256 (Base64)
-- Token-based authentication (UUID, หมดอายุ 7 วัน)
-- Role-based access: Master > Admin > Viewer
-- LockService ป้องกัน race condition ขณะบันทึกข้อมูล
-
----
-
-## 📝 Changelog
-
-### v1.0.0 (2026-03-03)
-- ✅ ระบบ FIFO สมบูรณ์ (In/Out/Transfer/Adjust)
-- ✅ Multi-branch support
-- ✅ Multi-user with role-based access
-- ✅ ต้นทุนอาหาร (WAC + Food Cost Calculator)
-- ✅ รายงานครบ (สต็อก, ประวัติ, ราคาซื้อ, มูลค่า)
-- 🐛 Fix: `updateTransaction` out — อ่าน Inventory sheet แบบ batch แทนทีละแถว (ป้องกัน timeout)
-- 🐛 Fix: `updateTransaction` in — คืน expiryDate เดิมเมื่อแก้ไขรายการ
-- 🐛 Fix: Adjust note แสดง direction (+/-) ชัดเจน
-- ⚡ Lock timeout ขยายจาก 5s → 10s
-
----
-
-## 📄 License
-
-MIT License — Free to use and modify.
-
----
-
-*Built with ❤️ for Restaurant & F&B businesses*
+*Last updated: 2026-03-03*
