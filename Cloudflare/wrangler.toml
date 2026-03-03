@@ -1,0 +1,11 @@
+# Cloudflare Worker: Kostock Inventory (GAS iframe)
+# Deploy: npx wrangler deploy
+# Set GAS_URL: npx wrangler secret put GAS_URL  (or use [vars] below)
+
+name = "kostock-inventory"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# URL ของ Google Apps Script Web App (แก้ตรงนี้หรือใช้ secret)
+[vars]
+GAS_URL = "https://script.google.com/macros/s/AKfycby-DDOnkZ2cp6GQNTUarH9gv-ytA2V3n7l38meAV9RXanaAVSpXReqCD95rcgRizixU/exec"

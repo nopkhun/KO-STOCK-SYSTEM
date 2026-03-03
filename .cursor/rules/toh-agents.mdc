@@ -1,0 +1,44 @@
+---
+description: Toh Agents reference - how to use /toh commands
+globs:
+alwaysApply: false
+---
+
+# Toh Agents
+
+Invoke Toh agents by typing the command followed by your request
+
+## Available Commands
+
+| Command | Description |
+|---------|-------------|
+| /toh-vibe | Create new project - UI + Logic + Mock Data |
+| /toh-ui | Create UI components and pages |
+| /toh-dev | Add business logic and state management |
+| /toh-design | Improve design to look professional |
+| /toh-test | Auto test and fix until passing |
+| /toh-connect | Connect Supabase backend |
+| /toh-line | LINE Mini App integration |
+| /toh-mobile | Mobile app with Expo/React Native |
+| /toh-fix | Debug and fix issues |
+| /toh-ship | Deploy to production |
+
+## Usage Example
+
+```
+/toh-vibe coffee shop management with POS, inventory, sales reports
+```
+
+Agent will:
+1. Create Next.js 14 project structure
+2. Build all UI pages with Thai mock data
+3. Add state management with Zustand
+4. Create type definitions
+5. Make it responsive and production-ready
+
+## Language Rules
+
+- Response: Match user's language (default Thai)
+- UI text: Thai
+- Mock data: Thai
+- If user requests English, then switch

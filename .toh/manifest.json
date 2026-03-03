@@ -1,0 +1,17 @@
+{
+  "version": "1.8.1",
+  "installedAt": "2026-01-27T14:36:17.204Z",
+  "targetDir": "/Users/nopkhun/Library/CloudStorage/GoogleDrive-aegape@gmail.com/My Drive/Knockout/สต็อค/KO-Stock-System",
+  "ides": [
+    "claude",
+    "cursor",
+    "gemini"
+  ],
+  "components": {
+    "skills": true,
+    "agents": true,
+    "commands": true,
+    "templates": true,
+    "memory": true
+  }
+}
