@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // IMPORTANT: API routes must be public - no auth required
   const { pathname } = request.nextUrl;
 
   // Public API routes (webhooks) - skip auth check
