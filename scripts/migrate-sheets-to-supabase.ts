@@ -54,6 +54,17 @@ interface IdMaps {
 const DRY_RUN = !process.argv.includes("--execute");
 const SKIP_USERS = process.argv.includes("--skip-users");
 
+// Skip flags for resuming interrupted migration
+const SKIP_STEPS = {
+  units: process.argv.includes("--skip-units"),
+  categories: process.argv.includes("--skip-categories"),
+  suppliers: process.argv.includes("--skip-suppliers"),
+  branches: process.argv.includes("--skip-branches"),
+  items: process.argv.includes("--skip-items"),
+  itemSuppliers: process.argv.includes("--skip-item-suppliers"),
+  inventory: process.argv.includes("--skip-inventory"),
+};
+
 // ========== Google Sheets Access (standalone, no lib imports) ==========
 
 const SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
@@ -885,38 +896,77 @@ async function main() {
   // Migration order matters: reference tables first, then dependents
   try {
     // 1. Units
-    log("── Step 1/8: Units ──");
-    allStats.push(
-      await migrateSimpleTable(supabase, "units", "Units", idMaps.units)
-    );
+    if (!SKIP_STEPS.units) {
+      log("── Step 1/8: Units ──");
+      allStats.push(
+        await migrateSimpleTable(supabase, "units", "Units", idMaps.units)
+      );
+    } else {
+      log("── Step 1/8: Units ── (SKIPPED)");
+      // Still load ID map from existing data
+      const { data: units } = await supabase.from("units").select("id, name");
+      if (units) for (const u of units) idMaps.units.set(u.name, u.id);
+    }
 
     // 2. Categories
-    log("── Step 2/8: Categories ──");
-    allStats.push(
-      await migrateSimpleTable(supabase, "categories", "Categories", idMaps.categories)
-    );
+    if (!SKIP_STEPS.categories) {
+      log("── Step 2/8: Categories ──");
+      allStats.push(
+        await migrateSimpleTable(supabase, "categories", "Categories", idMaps.categories)
+      );
+    } else {
+      log("── Step 2/8: Categories ── (SKIPPED)");
+      const { data: cats } = await supabase.from("categories").select("id, name");
+      if (cats) for (const c of cats) idMaps.categories.set(c.name, c.id);
+    }
 
     // 3. Suppliers
-    log("── Step 3/8: Suppliers ──");
-    allStats.push(
-      await migrateSimpleTable(supabase, "suppliers", "Suppliers", idMaps.suppliers)
-    );
+    if (!SKIP_STEPS.suppliers) {
+      log("── Step 3/8: Suppliers ──");
+      allStats.push(
+        await migrateSimpleTable(supabase, "suppliers", "Suppliers", idMaps.suppliers)
+      );
+    } else {
+      log("── Step 3/8: Suppliers ── (SKIPPED)");
+      const { data: supps } = await supabase.from("suppliers").select("id, name");
+      if (supps) for (const s of supps) idMaps.suppliers.set(s.name, s.id);
+    }
 
     // 4. Branches
-    log("── Step 4/8: Branches ──");
-    allStats.push(await migrateBranches(supabase, idMaps.branches));
+    if (!SKIP_STEPS.branches) {
+      log("── Step 4/8: Branches ──");
+      allStats.push(await migrateBranches(supabase, idMaps.branches));
+    } else {
+      log("── Step 4/8: Branches ── (SKIPPED)");
+      const { data: brs } = await supabase.from("branches").select("id, name");
+      if (brs) for (const b of brs) idMaps.branches.set(b.name, b.id);
+    }
 
     // 5. Items (depends on units, categories)
-    log("── Step 5/8: Items ──");
-    allStats.push(await migrateItems(supabase, idMaps));
+    if (!SKIP_STEPS.items) {
+      log("── Step 5/8: Items ──");
+      allStats.push(await migrateItems(supabase, idMaps));
+    } else {
+      log("── Step 5/8: Items ── (SKIPPED)");
+      const { data: items } = await supabase.from("items").select("id, name");
+      if (items) for (const i of items) idMaps.items.set(i.name, i.id);
+    }
 
     // 6. Item-Supplier mappings
-    log("── Step 6/8: ItemSuppliers ──");
-    allStats.push(await migrateItemSuppliers(supabase, idMaps));
+    if (!SKIP_STEPS.itemSuppliers) {
+      log("── Step 6/8: ItemSuppliers ──");
+      allStats.push(await migrateItemSuppliers(supabase, idMaps));
+    } else {
+      log("── Step 6/8: ItemSuppliers ── (SKIPPED)");
+    }
 
     // 7. Inventory lots (depends on branches, items, suppliers)
-    log("── Step 7/8: Inventory ──");
-    allStats.push(await migrateInventory(supabase, idMaps));
+    if (!SKIP_STEPS.inventory) {
+      log("── Step 7/8: Inventory ──");
+      allStats.push(await migrateInventory(supabase, idMaps));
+    } else {
+      log("── Step 7/8: Inventory ── (SKIPPED)");
+    }
 
     // 8. Transactions (depends on all of the above + users)
     if (!SKIP_USERS) {
