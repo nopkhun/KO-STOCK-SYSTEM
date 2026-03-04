@@ -82,6 +82,22 @@
 
 ### Data Migration ✅
 - `scripts/migrate-sheets-to-supabase.ts` (14 GAS sheets → Supabase)
+- Migration counts:
+  - units: 13
+  - categories: 12
+  - suppliers: 21
+  - branches: 5
+  - items: 401
+  - inventory: 434 (1,112 skipped - zero qty lots)
+  - transactions: 2,604 (15 skipped - missing item/branch)
+  - menus: 1
+  - profiles: 10 (via direct SQL)
+  - auth.users: 10 (via direct SQL - Admin API broken)
+
+### Auth Issue - RESOLVED ✅
+- Issue: Redirect loop after login (app/page.tsx had unconditional redirect)
+- Fix: Deleted app/page.tsx so dashboard route group serves /
+- Status: Production working - login successful
 
 ---
 
@@ -91,15 +107,14 @@
 |--------|-------|
 | `npm run build` | ✅ ผ่าน 0 errors |
 | TypeScript | ✅ Strict mode, 0 errors |
-| Routes | 28 (22 static + 6 API) |
+| Routes | 27 (21 static + 6 API) |
 
 ---
 
 ## Key Files
 
-### App Routes (22 pages)
+### App Routes (21 pages)
 ```
-app/page.tsx                              # /
 app/(auth)/login/page.tsx                 # /login
 app/(auth)/change-password/page.tsx      # /change-password
 app/(dashboard)/layout.tsx                # Dashboard shell
@@ -153,9 +168,27 @@ scripts/migrate-sheets-to-supabase.ts
 
 ## Current State
 
-**พัฒนาเสร็จ 100%** - พร้อม deploy และใช้งานจริง
+**🚀 พร้อมใช้งานจริง!** (2026-03-05)
+- Production URL: https://ko-stock-system.vercel.app/
+- Login: admin@ko-stock.local / KO@admin
+- All data migrated and accessible
+- Auth working (fixed redirect loop)
 
-รอ: การตั้งค่า Supabase, LINE, Google Sheets, และ Deploy
+### Users (10 accounts)
+| Username | Email | Role |
+|----------|-------|------|
+| admin | admin@ko-stock.local | master |
+| monchai | monchai@ko-stock.local | admin |
+| vivo | vivo@ko-stock.local | admin |
+| mali | mali@ko-stock.local | admin |
+| ranran | ranran@ko-stock.local | admin |
+| mssp | mssp@ko-stock.local | admin |
+| apple | apple@ko-stock.local | admin |
+| kobkob | kobkob@ko-stock.local | admin |
+| aomaom | aomaom@ko-stock.local | admin |
+| koikoi | koikoi@ko-stock.local | master |
+
+Password for all: KO@username
 
 ---
 
@@ -166,6 +199,6 @@ scripts/migrate-sheets-to-supabase.ts
 - LSP phantom errors from old deleted `app/` directories - **IGNORE**
 - Google Sheets sync: JWT via crypto.subtle (Edge-compatible)
 - OCR: GPT-4o Vision primary + regex fallback (ใช้ได้ without API key)
-
 ---
-*Last updated: 2026-03-04*
+
+*Last updated: 2026-03-05*
