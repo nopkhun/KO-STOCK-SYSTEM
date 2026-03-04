@@ -1,5 +1,33 @@
 # 📝 Session Changelog
 
+## [Release] v2.0.0 - 2026-03-04 — UX/UI Overhaul
+
+### ปัญหาที่แก้
+- Login ทุกครั้งที่ปิด browser (session หมดเร็ว)
+- โหลดช้า ไม่รู้สถานะว่ากำลังโหลด/บันทึกอยู่
+- ใช้งานยากบนมือถือ (ผู้ใช้เป็นแรงงานที่ไม่คุ้นเทคโนโลยี)
+- Toast แจ้งผลเล็กและหายเร็วเกินไป
+
+### การแก้ไข (Index.html + Cloudflare/index.html)
+
+| Task | รายละเอียด |
+|------|-------------|
+| 1 | **Auth Persistence** — เปลี่ยน sessionStorage → localStorage, เพิ่ม loginTime + 7 วัน expiry |
+| 2 | **Toast Redesign** — ใหญ่ขึ้น (min-w-[280px]), มี icon ✓/✕, ปุ่มปิด, แสดง 3.5 วินาที, animation ใหม่ |
+| 3 | **Saving Feedback** — เพิ่ม savingPulse CSS + overlay พร้อม spinner "กำลังบันทึก..." บน Transaction Modal และ Item Modal |
+| 4 | **Loading Banner** — เพิ่ม bannerSlideDown animation + banner แสดงเมื่อ `!inventoryLoaded && token && !isLoading` (phase 2 background load) |
+| 5 | Bottom Sheet Modal — มีอยู่แล้ว ไม่ต้องทำ |
+| 6+7 | **Bottom Nav + Quick Action** — เพิ่ม Bottom Nav Bar (4 tab: หน้าแรก/คลัง/+/ประวัติ/เมนู) + Quick Action Sheet (นำเข้า/เบิก/โอน/นับสต็อก) |
+| 8 | **Refetch 2-phase** — refetchData และ handleRefresh ใช้ getSystemDataBasic + getInventoryAndTransactions เหมือน loadData |
+| 9 | **Cloudflare Shell** — Orange theme + animated stage messages (เชื่อมต่อ → โหลดข้อมูล → เตรียมระบบ → เกือบพร้อม) + slow-load warning 8 วินาที |
+| 10 | **Hardcoded Toast Fix** — แก้ 3 old-style toast (login, change-password, setup) ให้เป็น design เดียวกับ toast หลัก |
+
+### ไฟล์ที่แก้ไข
+- `Index.html` — ~4,800+ บรรทัด, แก้ CSS animations, useState, useEffect, Toast component, Modals, Bottom Nav
+- `Cloudflare/index.html` — เขียนใหม่ทั้งหมด, orange theme + animated stages
+
+---
+
 ## [Fix] - 2026-03-03 — หลังเข้าสู่ระบบขึ้น "ยังไม่ได้ตั้งค่าระบบ" ทั้งที่ชีตมีข้อมูลครบ
 
 ### ปัญหา

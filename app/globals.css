@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-background: #ffffff;
+  --color-foreground: #0f172a;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-border: #e2e8f0;
+  --color-ring: #f97316;
+  --color-primary: #f97316;
+  --color-primary-foreground: #ffffff;
+  --animate-in: enter 0.2s ease-out;
+  --animate-out: exit 0.15s ease-in;
+}
+
+@keyframes enter {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes exit {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.95); }
+}
+
+@keyframes fade-in-0 {
+  from { opacity: 0; }
+}
+
+@keyframes fade-out-0 {
+  to { opacity: 0; }
+}
+
+@keyframes zoom-in-95 {
+  from { transform: scale(0.95); }
+}
+
+@keyframes zoom-out-95 {
+  to { transform: scale(0.95); }
+}
+
+@keyframes slide-in-from-left-1\/2 {
+  from { transform: translateX(-50%); }
+}
+
+@keyframes slide-out-to-left-1\/2 {
+  to { transform: translateX(-50%); }
+}
+
+@keyframes slide-in-from-top-\[48\%\] {
+  from { transform: translateY(-48%); }
+}
+
+@keyframes slide-out-to-top-\[48\%\] {
+  to { transform: translateY(-48%); }
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile input zoom prevention */
+@media (max-width: 767px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="email"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print { display: none !important; }
+}

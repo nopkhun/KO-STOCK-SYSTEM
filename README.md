@@ -1,52 +1,36 @@
-# KO-Stock-System (FoodStock Manager) 📦
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-ระบบจัดการสต็อกวัตถุดิบและคำนวณต้นทุนอาหาร สำหรับร้านอาหารและธุรกิจ F&B พัฒนาด้วย **Google Apps Script (GAS)** และ **React**
+## Getting Started
 
-> **"Type Once, Have it all!"** — จัดการคลังสินค้าแบบ FIFO, โอนย้ายระหว่างสาขา, และวิเคราะห์ต้นทุนได้ในที่เดียว
+First, run the development server:
 
----
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-## ✨ Features
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### 🛒 การจัดการสต็อก (Inventory Management)
-- **ระบบ FIFO (First-In, First-Out):** ตัดสต็อกตามล็อตที่เข้าก่อน เพื่อความแม่นยำของต้นทุนและอายุการใช้งาน
-- **Multi-branch Support:** รองรับการจัดการหลายสาขา พร้อมระบบโอนย้ายสินค้า (Transfer) ระหว่างสาขา
-- **Stock Take:** ระบบตรวจนับสต็อกจริง พร้อมคำนวณส่วนต่าง (+/-) และปรับยอดอัตโนมัติ
-- **Transaction History:** บันทึกประวัติการขยับเขยื้อนของสินค้าทั้งหมด (In, Out, Transfer, Adjust) พร้อมตัวกรองละเอียด
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-### 💰 ต้นทุนและคู่ค้า (Costing & Suppliers)
-- **Food Cost Calculator:** คำนวณต้นทุนต่อจานอัตโนมัติจากราคาวัตถุดิบเฉลี่ย (WAC)
-- **Supplier Management:** จัดการข้อมูลคู่ค้าและประวัติการซื้อ
-- **Pricing:** รองรับการบันทึกราคาซื้อและหน่วยซื้อที่แตกต่างจากหน่วยใช้งาน
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-### 📊 รายงานและการวิเคราะห์ (Reports)
-- **Dashboard:** สรุปภาพรวมสินค้าใกล้หมด, ยอดล่วงหน้า, และความเคลื่อนไหวประจำวัน
-- **Inventory Report:** สรุปยอดคงเหลือรายสินค้าแยกตามสาขา
-- **Export CSV:** รองรับการส่งออกข้อมูลรายงานและประวัติเพื่อนำไปใช้งานต่อ
+## Learn More
 
----
+To learn more about Next.js, take a look at the following resources:
 
-## 🛠 Tech Stack
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-- **Backend:** Google Apps Script (GAS)
-- **Database:** Google Sheets
-- **Frontend:** React 18, Tailwind CSS, Lucide Icons, Babel (Standalone)
-- **State Management:** React Hooks (useState, useMemo, useEffect)
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
----
+## Deploy on Vercel
 
-## 🚀 การติดตั้งและใช้งาน (Deployment)
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-1.  **คัดลอกไฟล์:** นำ Code จาก `Code.gs` และ `Index.html` ไปใส่ในโปรเจค Google Apps Script ใหม่
-2.  **เตรียม Google Sheets:** ระบบมีฟังก์ชัน `setupSheets` อัตโนมัติเมื่อเริ่มใช้งานครั้งแรก หรือสามารถสร้าง Sheets: `Items`, `Branches`, `Inventory`, `Transactions`, `Users`, `Tokens`, `AuditLog`, `Suppliers`, `Menus`, `MenuIngredients`, `MenuOverheads`
-3.  **Deploy:** เลือก "Deploy as Web App" ใน GAS Editor
-4.  **ตั้งค่าสิทธิ์:** กำหนดให้ "Anyone with Google Account" เข้าถึงได้
-
----
-
-## 📄 License & Version
-- **Version:** 2025.02.05.FINAL (Logic Audit Patched)
-- **Framework:** Toh Framework (AODD)
-
----
-*Last updated: 2026-03-03*
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
