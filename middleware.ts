@@ -2,6 +2,20 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Public API routes (webhooks) - skip auth check
+  const isApiRoute = pathname.startsWith("/api/");
+  if (isApiRoute) {
+    return NextResponse.next({ request });
+  }
+
+  // Public routes (login, change-password)
+  if (pathname === "/login" || pathname === "/change-password") {
+    return NextResponse.next({ request });
+  }
+
+  // For all other routes, check auth
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -29,13 +43,7 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-
-  // Public API routes (webhooks)
-  const isApiRoute = pathname.startsWith("/api/");
-  if (isApiRoute) {
-    return supabaseResponse;
-  }
+  // Redirect to login if not authenticated
 
   // Public routes
   if (pathname === "/login" || pathname === "/change-password") {
