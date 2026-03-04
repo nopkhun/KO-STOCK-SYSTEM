@@ -2,22 +2,20 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // IMPORTANT: API routes must be public - no auth required
   const { pathname } = request.nextUrl;
 
-  // Public API routes (webhooks) - skip auth check
-  const isApiRoute = pathname.startsWith("/api/");
-  if (isApiRoute) {
-    return NextResponse.next({ request });
+  // Skip auth for all API routes
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
   }
 
-  // Public routes (login, change-password)
+  // Skip auth for login and change-password
   if (pathname === "/login" || pathname === "/change-password") {
-    return NextResponse.next({ request });
+    return NextResponse.next();
   }
 
-  // For all other routes, check auth
-  let supabaseResponse = NextResponse.next({ request });
+  // Check auth for all other routes
+  let supabaseResponse = NextResponse.next();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,7 +29,7 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          supabaseResponse = NextResponse.next({ request });
+          supabaseResponse = NextResponse.next();
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
@@ -44,19 +42,6 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Redirect to login if not authenticated
-
-  // Public routes
-  if (pathname === "/login" || pathname === "/change-password") {
-    if (user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/";
-      return NextResponse.redirect(url);
-    }
-    return supabaseResponse;
-  }
-
-  // Protected routes: redirect to login if not authenticated
   if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -68,6 +53,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/(.*)",
+    "/((?!api/).*)",
   ],
 };
