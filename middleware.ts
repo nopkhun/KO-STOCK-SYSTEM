@@ -4,17 +4,14 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip auth for all API routes
+  // Skip auth check entirely for API routes (they handle their own auth)
   if (pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
-  // Skip auth for login and change-password
-  if (pathname === "/login" || pathname === "/change-password") {
-    return NextResponse.next();
-  }
-
-  // Check auth for all other routes
+  // Create Supabase client with cookie handling for ALL page routes
+  // IMPORTANT: Do NOT skip this for /login — Supabase needs to process
+  // cookies on every request to keep the session in sync
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -38,21 +35,36 @@ export async function middleware(request: NextRequest) {
     }
   );
 
+  // IMPORTANT: Do not add any logic between createServerClient and getUser()
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  // Public routes that don't require authentication
+  const isPublicRoute =
+    pathname === "/login" || pathname === "/change-password";
+
+  if (!user && !isPublicRoute) {
+    // Not authenticated — redirect to login
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
+  if (user && pathname === "/login") {
+    // Already authenticated — redirect away from login page
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
+  // IMPORTANT: Always return supabaseResponse — it has the updated cookies
   return supabaseResponse;
 }
 
 export const config = {
   matcher: [
-    "/((?!api/).*)",
+    // Match all routes except static files and images
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

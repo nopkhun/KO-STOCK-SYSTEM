@@ -42,10 +42,11 @@ export default function LoginPage() {
         .single();
 
       if (profile?.must_change_password) {
-        router.push("/change-password");
+        // Hard navigation to ensure cookies are sent with the request
+        window.location.href = "/change-password";
       } else {
-        router.push("/");
-        router.refresh();
+        // Hard navigation — router.push (soft nav) can cause cookie sync issues
+        window.location.href = "/";
       }
     } catch {
       setError("เกิดข้อผิดพลาด กรุณาลองอีกครั้ง");
