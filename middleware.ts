@@ -2,16 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Skip auth check entirely for API routes (they handle their own auth)
-  if (pathname.startsWith("/api/")) {
+  // Skip middleware for API routes (they handle their own auth)
+  if (request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
-  // Create Supabase client with cookie handling for ALL page routes
-  // IMPORTANT: Do NOT skip this for /login — Supabase needs to process
-  // cookies on every request to keep the session in sync
+  // Create Supabase client to refresh session cookies on every request
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -35,33 +31,17 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: Do not add any logic between createServerClient and getUser()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Refresh the session — this updates cookies if the token was refreshed
+  // We intentionally don't use the result for redirects here because
+  // getUser() behaves differently in Edge runtime vs Node.js runtime.
+  // Auth protection is handled in the dashboard layout instead.
+  await supabase.auth.getUser();
 
-  // Public routes that don't require authentication
-  const isPublicRoute =
-    pathname === "/login" || pathname === "/change-password";
-
-  if (!user && !isPublicRoute) {
-    // Not authenticated — redirect to login
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
-
-  // NOTE: Do NOT redirect authenticated users away from /login here.
-  // That causes a redirect loop when stale cookies exist but token refresh fails.
-  // The login page handles this client-side instead.
-
-  // IMPORTANT: Always return supabaseResponse — it has the updated cookies
   return supabaseResponse;
 }
 
 export const config = {
   matcher: [
-    // Match all routes except static files and images
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

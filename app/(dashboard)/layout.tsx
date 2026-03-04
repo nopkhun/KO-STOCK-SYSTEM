@@ -104,6 +104,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return user?.role && item.roles.includes(user.role);
   };
 
+  // Redirect to login if not authenticated (auth guard)
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [authLoading, user, router]);
+
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -113,6 +120,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </div>
     );
+  }
+
+  // Don't render dashboard until user is confirmed
+  if (!user) {
+    return null;
   }
 
   return (
