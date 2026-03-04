@@ -51,12 +51,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname === "/login") {
-    // Already authenticated — redirect away from login page
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
-  }
+  // NOTE: Do NOT redirect authenticated users away from /login here.
+  // That causes a redirect loop when stale cookies exist but token refresh fails.
+  // The login page handles this client-side instead.
 
   // IMPORTANT: Always return supabaseResponse — it has the updated cookies
   return supabaseResponse;
