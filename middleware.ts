@@ -31,6 +31,12 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Public API routes (webhooks)
+  const isApiRoute = pathname.startsWith("/api/");
+  if (isApiRoute) {
+    return supabaseResponse;
+  }
+
   // Public routes
   if (pathname === "/login" || pathname === "/change-password") {
     if (user) {
