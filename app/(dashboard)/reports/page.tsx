@@ -72,7 +72,7 @@ export default function ReportsPage() {
       let query = supabase
         .from("transactions")
         .select(
-          "*, item:items(id, name), branch:branches!transactions_branch_id_fkey(id, name), target_branch:branches!transactions_target_branch_id_fkey(id, name), supplier:suppliers(id, name), performer:profiles!transactions_performed_by_fkey(id, username)"
+          "*, item:items(id, name), branch:branches!transactions_branch_id_fkey(id, name), target_branch:branches!transactions_target_branch_id_fkey(id, name), supplier:suppliers(id, name), performer:profiles(id, username)"
         )
         .gte("created_at", `${startDate}T00:00:00`)
         .lte("created_at", `${endDate}T23:59:59`)
@@ -85,14 +85,36 @@ export default function ReportsPage() {
         query = query.eq("item_id", itemId);
       }
 
-      const { data } = await query;
-      setTransactions((data as TransactionWithRelations[]) || []);
-    } catch {
-      // silent
+      const { data, error } = await query;
+      if (error) {
+        console.error("[ReportsPage] Supabase error:", error.message);
+        // Fallback without joins
+        let fallbackQuery = supabase
+          .from("transactions")
+          .select("*")
+          .gte("created_at", `${startDate}T00:00:00`)
+          .lte("created_at", `${endDate}T23:59:59`)
+          .order("created_at", { ascending: false });
+        if (branchId !== "all") fallbackQuery = fallbackQuery.eq("branch_id", branchId);
+        if (itemId !== "all") fallbackQuery = fallbackQuery.eq("item_id", itemId);
+        const { data: fallbackData } = await fallbackQuery;
+        setTransactions((fallbackData as TransactionWithRelations[]) || []);
+      } else {
+        setTransactions((data as TransactionWithRelations[]) || []);
+      }
+    } catch (err) {
+      console.error("[ReportsPage] Error:", err);
     } finally {
       setLoading(false);
     }
   }, [startDate, endDate, branchId, itemId]);
+
+  // Auto-fetch when page loads (after master data is ready)
+  useEffect(() => {
+    if (!masterLoading && !hasSearched) {
+      fetchTransactions();
+    }
+  }, [masterLoading, hasSearched, fetchTransactions]);
 
   // Summary calculations
   const summary = useMemo(() => {
@@ -437,19 +459,13 @@ export default function ReportsPage() {
         </>
       )}
 
-      {/* Initial state before search */}
+      {/* Initial state - show loading skeleton while auto-fetching */}
       {!hasSearched && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
-              <BarChart3 className="h-8 w-8 text-orange-500" />
-            </div>
-            <p className="text-lg font-medium text-gray-700">เลือกเงื่อนไขแล้วกดค้นหา</p>
-            <p className="mt-1 text-sm text-gray-400">
-              ระบุช่วงวันที่ สาขา หรือสินค้า แล้วกด &quot;ค้นหา&quot; เพื่อดูรายงาน
-            </p>
-          </CardContent>
-        </Card>
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-12 rounded-lg" />
+          ))}
+        </div>
       )}
     </div>
   );

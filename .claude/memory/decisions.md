@@ -20,6 +20,9 @@
 | 2026-03-04 | Create users via direct SQL (not Admin API) | auth.admin.createUser() returns HTTP 500 for all users -- workaround |
 | 2026-03-04 | Auth guard in dashboard layout (not middleware) | getUser() fails in Edge runtime (middleware) but works in Node.js/browser |
 | 2026-03-05 | Delete app/page.tsx, let route group serve / | app/page.tsx had unconditional redirect('/login') causing infinite loop |
+| 2026-03-05 | Remove explicit FK hint for performer join | `profiles!transactions_performed_by_fkey` FK doesn't exist in schema; use `profiles(id, username)` for PostgREST auto-inference |
+| 2026-03-05 | Auto-fetch reports on page load | Reports page was unusable - required manual click to see any data |
+| 2026-03-05 | Add fallback query on Supabase join failure | If relational query fails, fetch raw data without joins so page still shows content |
 
 ## Design Decisions
 | Date | Decision | Reason |

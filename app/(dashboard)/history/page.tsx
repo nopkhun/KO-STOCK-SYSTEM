@@ -64,7 +64,7 @@ function getTypeIcon(type: string) {
 
 export default function HistoryPage() {
   const { transactions, fetchTransactions } = useInventoryStore();
-  const { branches, items, suppliers, fetchAll, loading: masterLoading } = useMasterDataStore();
+  const { branches, items, suppliers, fetchAll } = useMasterDataStore();
 
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -75,12 +75,19 @@ export default function HistoryPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       setLoading(true);
-      await Promise.all([fetchTransactions(200), fetchAll()]);
-      setLoading(false);
+      try {
+        await Promise.all([fetchTransactions(200), fetchAll()]);
+      } catch (err) {
+        console.error("[HistoryPage] Failed to load data:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     };
     load();
+    return () => { cancelled = true; };
   }, [fetchTransactions, fetchAll]);
 
   const filtered = useMemo(() => {
@@ -127,7 +134,7 @@ export default function HistoryPage() {
     setSearch("");
   };
 
-  if (loading || masterLoading) {
+  if (loading) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">

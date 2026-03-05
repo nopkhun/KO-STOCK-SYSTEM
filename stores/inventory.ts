@@ -42,17 +42,29 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   fetchTransactions: async (limit = 50) => {
     try {
       const supabase = createClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("transactions")
         .select(
-          "*, item:items(id, name), branch:branches!transactions_branch_id_fkey(id, name), target_branch:branches!transactions_target_branch_id_fkey(id, name), supplier:suppliers(id, name), performer:profiles!transactions_performed_by_fkey(id, username)"
+          "*, item:items(id, name), branch:branches!transactions_branch_id_fkey(id, name), target_branch:branches!transactions_target_branch_id_fkey(id, name), supplier:suppliers(id, name), performer:profiles(id, username)"
         )
         .order("created_at", { ascending: false })
         .limit(limit);
 
+      if (error) {
+        console.error("[fetchTransactions] Supabase error:", error.message);
+        // Fallback: fetch without joins that might fail
+        const { data: fallbackData } = await supabase
+          .from("transactions")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(limit);
+        set({ transactions: (fallbackData as TransactionWithRelations[]) || [] });
+        return;
+      }
+
       set({ transactions: (data as TransactionWithRelations[]) || [] });
-    } catch {
-      // silent
+    } catch (err) {
+      console.error("[fetchTransactions] Error:", err);
     }
   },
 
