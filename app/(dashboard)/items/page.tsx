@@ -45,7 +45,6 @@ interface ItemForm {
   category_id: string;
   min_stock: string;
   custom_price: string;
-  custom_price_unit: string;
 }
 
 const EMPTY_FORM: ItemForm = {
@@ -54,7 +53,6 @@ const EMPTY_FORM: ItemForm = {
   category_id: "",
   min_stock: "0",
   custom_price: "",
-  custom_price_unit: "บาท/กก.",
 };
 
 export default function ItemsPage() {
@@ -104,7 +102,6 @@ export default function ItemsPage() {
       category_id: item.category_id || "",
       min_stock: String(item.min_stock),
       custom_price: item.custom_price != null ? String(item.custom_price) : "",
-      custom_price_unit: item.custom_price_unit || "บาท/กก.",
     });
     setError("");
     setFormOpen(true);
@@ -126,13 +123,16 @@ export default function ItemsPage() {
 
     try {
       const supabase = createClient();
+      // Auto-compute price unit from the selected unit
+      const selectedUnit = units.find((u) => u.id === form.unit_id);
+      const priceUnit = selectedUnit ? `บาท/${selectedUnit.name}` : "บาท/หน่วย";
       const payload = {
         name: form.name.trim(),
         unit_id: form.unit_id || null,
         category_id: form.category_id || null,
         min_stock: Number(form.min_stock) || 0,
         custom_price: form.custom_price ? Number(form.custom_price) : null,
-        custom_price_unit: form.custom_price_unit || "บาท/กก.",
+        custom_price_unit: priceUnit,
       };
 
       if (editingItem) {
@@ -470,9 +470,9 @@ export default function ItemsPage() {
             </div>
 
             {/* Custom Price */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="custom-price">ราคากำหนดเอง</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="custom-price">ราคากำหนดเอง</Label>
+              <div className="flex items-center gap-2">
                 <Input
                   id="custom-price"
                   type="number"
@@ -481,16 +481,13 @@ export default function ItemsPage() {
                   placeholder="ไม่ระบุ"
                   value={form.custom_price}
                   onChange={(e) => setForm({ ...form, custom_price: e.target.value })}
+                  className="flex-1"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="price-unit">หน่วยราคา</Label>
-                <Input
-                  id="price-unit"
-                  placeholder="บาท/กก."
-                  value={form.custom_price_unit}
-                  onChange={(e) => setForm({ ...form, custom_price_unit: e.target.value })}
-                />
+                <span className="shrink-0 text-sm text-gray-500">
+                  {form.unit_id
+                    ? `บาท/${units.find((u) => u.id === form.unit_id)?.name || "หน่วย"}`
+                    : "บาท/หน่วย"}
+                </span>
               </div>
             </div>
 

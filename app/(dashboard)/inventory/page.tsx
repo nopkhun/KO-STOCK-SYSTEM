@@ -38,6 +38,7 @@ import {
   Calendar,
   AlertTriangle,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { InventoryLot, ItemWithRelations, StockSummary } from "@/types/database";
 
 interface ItemStockRow {
@@ -52,6 +53,7 @@ interface ItemStockRow {
 }
 
 export default function InventoryPage() {
+  const router = useRouter();
   const {
     items,
     categories,
@@ -293,6 +295,8 @@ export default function InventoryPage() {
                     rows={group.rows}
                     expandedItems={expandedItems}
                     onToggleExpand={toggleExpand}
+                    onStockIn={(itemId) => router.push(`/stock-in?item=${itemId}`)}
+                    onStockOut={(itemId) => router.push(`/stock-out?item=${itemId}`)}
                   />
                 ))}
               </tbody>
@@ -312,6 +316,8 @@ export default function InventoryPage() {
               row={row}
               expanded={expandedItems.has(row.item.id)}
               onToggle={() => toggleExpand(row.item.id)}
+              onStockIn={() => router.push(`/stock-in?item=${row.item.id}`)}
+              onStockOut={() => router.push(`/stock-out?item=${row.item.id}`)}
             />
           ))
         )}
@@ -326,11 +332,15 @@ function CategoryGroup({
   rows,
   expandedItems,
   onToggleExpand,
+  onStockIn,
+  onStockOut,
 }: {
   categoryName: string;
   rows: ItemStockRow[];
   expandedItems: Set<string>;
   onToggleExpand: (id: string) => void;
+  onStockIn: (itemId: string) => void;
+  onStockOut: (itemId: string) => void;
 }) {
   return (
     <>
@@ -350,6 +360,8 @@ function CategoryGroup({
             row={row}
             expanded={expanded}
             onToggle={() => onToggleExpand(row.item.id)}
+            onStockIn={() => onStockIn(row.item.id)}
+            onStockOut={() => onStockOut(row.item.id)}
           />
         );
       })}
@@ -361,10 +373,14 @@ function DesktopItemRow({
   row,
   expanded,
   onToggle,
+  onStockIn,
+  onStockOut,
 }: {
   row: ItemStockRow;
   expanded: boolean;
   onToggle: () => void;
+  onStockIn: () => void;
+  onStockOut: () => void;
 }) {
   return (
     <>
@@ -414,11 +430,11 @@ function DesktopItemRow({
         </td>
         <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-end gap-1">
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-green-600 hover:text-green-700 hover:bg-green-50">
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-green-600 hover:text-green-700 hover:bg-green-50" onClick={onStockIn}>
               <ArrowDownToLine className="mr-1 h-3 w-3" />
               รับเข้า
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50" onClick={onStockOut}>
               <ArrowUpFromLine className="mr-1 h-3 w-3" />
               เบิกออก
             </Button>
@@ -536,10 +552,14 @@ function MobileItemCard({
   row,
   expanded,
   onToggle,
+  onStockIn,
+  onStockOut,
 }: {
   row: ItemStockRow;
   expanded: boolean;
   onToggle: () => void;
+  onStockIn: () => void;
+  onStockOut: () => void;
 }) {
   return (
     <Card className="overflow-hidden">
@@ -646,6 +666,7 @@ function MobileItemCard({
               variant="outline"
               size="sm"
               className="flex-1 text-xs text-green-600 border-green-200 hover:bg-green-50"
+              onClick={onStockIn}
             >
               <ArrowDownToLine className="mr-1 h-3 w-3" />
               รับเข้า
@@ -654,6 +675,7 @@ function MobileItemCard({
               variant="outline"
               size="sm"
               className="flex-1 text-xs text-red-600 border-red-200 hover:bg-red-50"
+              onClick={onStockOut}
             >
               <ArrowUpFromLine className="mr-1 h-3 w-3" />
               เบิกออก

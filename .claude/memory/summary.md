@@ -38,8 +38,14 @@
 - Stocktake (physical vs system qty, discrepancy tracking)
 - History (filters: type, branch, item, date)
 
+**Stock Operations (NEW):**
+- Stock-In page (`/stock-in`) — dedicated form with item search, supplier, expiry, notes
+- Stock-Out page (`/stock-out`) — form with reason selector, current stock info, estimated value
+- Transfer page (`/transfer`) — form with source/target branch, WAC display, validation
+- Inventory page buttons wired to navigate to stock-in/stock-out pages
+
 **Master Data:**
-- Items (CRUD, search, category filter, admin gating)
+- Items (CRUD, search, category filter, admin gating, auto-computed price unit from selected unit)
 - Branches (CRUD + HQ badge)
 - Units, Categories, Suppliers (simple CRUD)
 
@@ -107,19 +113,22 @@
 |--------|-------|
 | `npm run build` | ✅ ผ่าน 0 errors |
 | TypeScript | ✅ Strict mode, 0 errors |
-| Routes | 27 (21 static + 6 API) |
+| Routes | 31 (24 static + 7 API) |
 
 ---
 
 ## Key Files
 
-### App Routes (21 pages)
+### App Routes (24 pages)
 ```
 app/(auth)/login/page.tsx                 # /login
 app/(auth)/change-password/page.tsx      # /change-password
 app/(dashboard)/layout.tsx                # Dashboard shell
 app/(dashboard)/page.tsx                  # Dashboard
 app/(dashboard)/inventory/page.tsx       # /inventory
+app/(dashboard)/stock-in/page.tsx        # /stock-in (NEW)
+app/(dashboard)/stock-out/page.tsx       # /stock-out (NEW)
+app/(dashboard)/transfer/page.tsx        # /transfer (NEW)
 app/(dashboard)/stocktake/page.tsx       # /stocktake
 app/(dashboard)/history/page.tsx         # /history
 app/(dashboard)/items/page.tsx            # /items

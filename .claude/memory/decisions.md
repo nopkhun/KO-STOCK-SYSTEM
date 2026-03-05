@@ -20,6 +20,9 @@
 | 2026-03-04 | Create users via direct SQL (not Admin API) | auth.admin.createUser() returns HTTP 500 for all users -- workaround |
 | 2026-03-04 | Auth guard in dashboard layout (not middleware) | getUser() fails in Edge runtime (middleware) but works in Node.js/browser |
 | 2026-03-05 | Delete app/page.tsx, let route group serve / | app/page.tsx had unconditional redirect('/login') causing infinite loop |
+| 2026-03-05 | Dedicated pages for stock-in/out/transfer instead of modal-only | Better UX, direct URL access, pre-fill via query params (?item=), nav menu integration |
+| 2026-03-05 | Auto-compute price unit from selected unit (read-only) | Users only set main unit; price unit derives as บาท/{unit.name} — prevents inconsistent freeform input |
+| 2026-03-05 | Add stock operations to mainNav (not separate nav section) | Keep navigation flat and simple; these are core daily operations |
 
 ## Design Decisions
 | Date | Decision | Reason |

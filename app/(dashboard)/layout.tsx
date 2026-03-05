@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   Package,
+  PackagePlus,
+  PackageMinus,
+  ArrowRightLeft,
   ClipboardCheck,
   History,
   BarChart3,
@@ -38,6 +41,9 @@ interface NavItem {
 const mainNav: NavItem[] = [
   { label: "แดชบอร์ด", href: "/", icon: LayoutDashboard },
   { label: "สต็อกสินค้า", href: "/inventory", icon: Package },
+  { label: "นำเข้าสินค้า", href: "/stock-in", icon: PackagePlus },
+  { label: "เบิกของ", href: "/stock-out", icon: PackageMinus },
+  { label: "โอนย้าย", href: "/transfer", icon: ArrowRightLeft },
   { label: "ตรวจนับสต็อก", href: "/stocktake", icon: ClipboardCheck },
   { label: "ประวัติ", href: "/history", icon: History },
   { label: "รายงาน", href: "/reports", icon: BarChart3 },
