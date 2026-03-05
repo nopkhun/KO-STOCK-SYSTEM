@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useInventoryStore } from "@/stores/inventory";
 import { useMasterDataStore } from "@/stores/master-data";
-import { cn, formatDateTime, formatCurrency, formatNumber, getTransactionTypeLabel } from "@/lib/utils";
+import { cn, formatDate, formatDateTime, formatCurrency, formatNumber, getTransactionTypeLabel } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -303,7 +303,10 @@ export default function HistoryPage() {
                   return (
                     <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                        {formatDateTime(tx.created_at)}
+                        {/* Show transaction_date (date only) if set, otherwise fall back to created_at timestamp */}
+                        {tx.transaction_date
+                          ? formatDate(tx.transaction_date)
+                          : formatDateTime(tx.created_at)}
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={badgeVariant} className="text-[11px]">
@@ -412,7 +415,12 @@ export default function HistoryPage() {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
-                        <span>{formatDateTime(tx.created_at)}</span>
+                          <span>
+                            {/* Show transaction_date (date only) if set, otherwise fall back to created_at */}
+                            {tx.transaction_date
+                              ? formatDate(tx.transaction_date)
+                              : formatDateTime(tx.created_at)}
+                          </span>
                         <span>·</span>
                         <span>{tx.branch?.name || "-"}</span>
                       </div>

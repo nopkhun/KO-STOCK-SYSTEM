@@ -90,6 +90,7 @@ export interface Transaction {
   out_value: number | null;
   lot_id: string | null;
   performed_by: string;
+  transaction_date: string | null;
   created_at: string;
 }
 

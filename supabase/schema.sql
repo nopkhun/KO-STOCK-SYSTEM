@@ -111,6 +111,7 @@ CREATE TABLE transactions (
   out_value NUMERIC,
   lot_id TEXT,
   performed_by UUID NOT NULL,
+  transaction_date DATE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
