@@ -28,6 +28,7 @@ import {
   ChevronUp,
   ArrowUpDown,
   Layers,
+  Info,
 } from "lucide-react";
 
 interface StockRow {
@@ -198,7 +199,7 @@ export default function ValueReportPage() {
             รายงานมูลค่าสต็อก
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            มูลค่าสินค้าคงเหลือแยกตามหมวดหมู่ (คำนวณด้วย WAC)
+            มูลค่าสินค้าคงเหลือตามต้นทุนจริงจากใบเสร็จ (Weighted Average Cost)
           </p>
         </div>
         <div className="flex gap-2 print:hidden">
@@ -234,12 +235,26 @@ export default function ValueReportPage() {
         </Select>
       </div>
 
+      {/* Calculation methodology info */}
+      <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 print:hidden">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+        <div className="text-xs leading-relaxed text-blue-700">
+          <span className="font-medium">วิธีคำนวณ:</span>{" "}
+          มูลค่าสต็อกคำนวณจาก<strong>ต้นทุนจริงในแต่ละ Lot</strong> (ราคาที่ซื้อมาจริงตามใบเสร็จ)
+          โดยใช้วิธี <strong>WAC (Weighted Average Cost)</strong> — ไม่ใช่ราคาขาย
+          เมื่อนำเข้าสินค้าใหม่ ราคาต้นทุนเฉลี่ยจะอัปเดตอัตโนมัติ
+        </div>
+      </div>
+
       {/* Print header */}
       <div className="hidden print:block">
-        <h2 className="text-lg font-bold">รายงานมูลค่าสต็อก</h2>
+        <h2 className="text-lg font-bold">รายงานมูลค่าสต็อก (ต้นทุนจริง WAC)</h2>
         <p className="text-sm text-gray-500">
           สาขา: {branchId === "all" ? "ทุกสาขา" : branches.find((b) => b.id === branchId)?.name}
           {" | "}วันที่พิมพ์: {new Date().toLocaleDateString("th-TH")}
+        </p>
+        <p className="mt-1 text-xs text-gray-400">
+          * มูลค่าคำนวณจากต้นทุนซื้อจริงตามใบเสร็จ (Weighted Average Cost) ไม่ใช่ราคาขาย
         </p>
       </div>
 
@@ -251,7 +266,7 @@ export default function ValueReportPage() {
               <DollarSign className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">มูลค่ารวม</p>
+              <p className="text-sm text-gray-500">มูลค่ารวม (ต้นทุนจริง)</p>
               <p className="text-2xl font-bold text-green-600">
                 {formatCurrency(grandTotal)}
               </p>
@@ -325,7 +340,12 @@ export default function ValueReportPage() {
                         )}
                       </button>
                     </th>
-                    <th className="whitespace-nowrap px-4 py-3 text-right">WAC (บาท)</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-right">
+                      <div className="flex flex-col items-end">
+                        <span>ต้นทุนเฉลี่ย</span>
+                        <span className="text-[10px] font-normal text-gray-400">(WAC/หน่วย)</span>
+                      </div>
+                    </th>
                     <th className="whitespace-nowrap px-4 py-3 text-right">
                       <button
                         className="ml-auto flex items-center gap-1 hover:text-gray-700 print:pointer-events-none"

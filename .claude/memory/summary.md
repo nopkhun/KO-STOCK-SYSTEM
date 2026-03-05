@@ -76,9 +76,17 @@
 - **OCR Utils:** `lib/ocr.ts`
   - downloadLineImage, parseReceiptWithGPT (GPT-4o Vision)
   - parseReceiptFallback (regex, works without OpenAI key)
-  - matchItemsToInventory
-- **OCR Process API:** `/api/ocr/process`
-- **OCR Confirm API:** `/api/ocr/confirm`
+  - matchItemsToInventory (enhanced: matches name_at_supplier + items.name with supplier context)
+- **OCR Process API:** `/api/ocr/process` (enhanced: detects supplier, passes to matching)
+- **OCR Confirm API:** `/api/ocr/confirm` (enhanced: auto-learns name_at_supplier from parsed receipts)
+
+### Phase 5: Items Enhancement ✅
+- **Recommended Price (WAC):** Items page shows WAC from inventory lots as recommended price with "ใช้ค่านี้" button
+- **Recommended Min Stock:** Calculated from avg daily out-transactions × 5 days safety factor
+- **Supplier Mappings:** Items page shows/manages item_suppliers with name_at_supplier per supplier
+- **Auto-populate item_suppliers:** Transaction API auto-upserts on stock-in; OCR confirm saves parsed names
+- **Value Report Clarity:** Updated UI to clarify WAC/real lot cost methodology (info banner, column headers, print footnote)
+- **Stock Recommendations Utility:** `lib/utils/stock-recommendations.ts`
 
 ### Data Migration ✅
 - `scripts/migrate-sheets-to-supabase.ts` (14 GAS sheets → Supabase)
@@ -154,6 +162,7 @@ supabase/schema.sql            # Database (13 tables)
 types/database.ts              # TypeScript types
 lib/utils.ts                   # Utilities
 lib/utils/fifo.ts              # FIFO logic
+lib/utils/stock-recommendations.ts # Recommended min stock & price
 lib/supabase/                  # Clients
 lib/line.ts                    # LINE API
 lib/google-sheets.ts           # Sheets API

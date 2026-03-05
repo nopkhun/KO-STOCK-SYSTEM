@@ -83,6 +83,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: txError.message }, { status: 500 });
       }
 
+      // Auto-populate item_suppliers when supplier is provided
+      if (supplier_id) {
+        await supabase
+          .from("item_suppliers")
+          .upsert(
+            { item_id, supplier_id, name_at_supplier: "" },
+            { onConflict: "item_id,supplier_id", ignoreDuplicates: true }
+          );
+      }
+
       // Audit log
       await supabase.from("audit_log").insert({
         user_id: user.id,

@@ -42,7 +42,7 @@ export const useMasterDataStore = create<MasterDataState>((set, get) => ({
           supabase.from("suppliers").select("*").order("name"),
           supabase
             .from("items")
-            .select("*, unit:units(*), category:categories(*)")
+            .select("*, unit:units(*), category:categories(*), item_suppliers(*)")
             .order("name"),
         ]);
 

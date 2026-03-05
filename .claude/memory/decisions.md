@@ -20,6 +20,10 @@
 | 2026-03-04 | Create users via direct SQL (not Admin API) | auth.admin.createUser() returns HTTP 500 for all users -- workaround |
 | 2026-03-04 | Auth guard in dashboard layout (not middleware) | getUser() fails in Edge runtime (middleware) but works in Node.js/browser |
 | 2026-03-05 | Delete app/page.tsx, let route group serve / | app/page.tsx had unconditional redirect('/login') causing infinite loop |
+| 2026-03-05 | Recommended values as defaults, not stored | WAC price and min stock are computed real-time from lots/transactions, user can override |
+| 2026-03-05 | Safety factor 5 days for min stock | Recommended min stock = avg daily usage × 5 (conservative buffer) |
+| 2026-03-05 | OCR name_at_supplier auto-learn with ignoreDuplicates | Don't overwrite user-set supplier names when auto-populating |
+| 2026-03-05 | Rename SelectItem to SelectOption in items page | Avoid naming conflict with shadcn/ui SelectItem component |
 
 ## Design Decisions
 | Date | Decision | Reason |

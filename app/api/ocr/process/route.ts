@@ -80,18 +80,39 @@ export async function POST(request: NextRequest) {
 
     // Try to match parsed items to system inventory items
     let matchedItems: ReturnType<typeof matchItemsToInventory> = [];
+    let detectedSupplierId: string | undefined;
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
       if (supabaseUrl && supabaseServiceKey) {
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        // Fetch items with their supplier-specific names
         const { data: items } = await supabase
           .from("items")
-          .select("id, name");
+          .select("id, name, item_suppliers(supplier_id, name_at_supplier)");
+
+        // Try to identify the supplier from parsed receipt
+        if (parsed.supplier) {
+          const { data: suppliers } = await supabase
+            .from("suppliers")
+            .select("id, name");
+
+          if (suppliers) {
+            const supplierLower = parsed.supplier.toLowerCase();
+            const matchedSupplier = suppliers.find((s) =>
+              supplierLower.includes(s.name.toLowerCase()) ||
+              s.name.toLowerCase().includes(supplierLower)
+            );
+            if (matchedSupplier) {
+              detectedSupplierId = matchedSupplier.id;
+            }
+          }
+        }
 
         if (items && items.length > 0 && parsed.items.length > 0) {
-          matchedItems = matchItemsToInventory(parsed, items);
+          matchedItems = matchItemsToInventory(parsed, items, detectedSupplierId);
         }
       }
     } catch (matchError) {
@@ -112,6 +133,7 @@ export async function POST(request: NextRequest) {
       items: parsed.items,
       grand_total: parsed.grand_total,
       matched_items: matchedItems,
+      detected_supplier_id: detectedSupplierId || null,
       method: hasOpenAI ? "gpt-4o-vision" : "fallback",
     });
   } catch (error) {

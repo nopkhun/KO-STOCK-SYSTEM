@@ -250,15 +250,28 @@ export function parseReceiptFallback(text: string): ParsedReceipt {
 
 // ========== Fuzzy Matching ==========
 
+interface SystemItemWithSuppliers {
+  id: string;
+  name: string;
+  item_suppliers?: Array<{
+    supplier_id: string;
+    name_at_supplier: string;
+  }>;
+}
+
 /**
  * Fuzzy match parsed item names against the system's item list.
  * Uses simple substring matching and Levenshtein-like scoring.
+ * Enhanced: also matches against supplier-specific names (name_at_supplier).
+ *
  * @param parsed - The parsed receipt
- * @param systemItems - Array of { id, name } from the items table
+ * @param systemItems - Array of items with optional item_suppliers data
+ * @param receiptSupplierId - Optional supplier ID detected from receipt (to prioritize supplier-specific names)
  */
 export function matchItemsToInventory(
   parsed: ParsedReceipt,
-  systemItems: Array<{ id: string; name: string }>
+  systemItems: SystemItemWithSuppliers[],
+  receiptSupplierId?: string
 ): MatchedItem[] {
   return parsed.items.map((parsedItem) => {
     let bestMatch: { id: string; name: string } | null = null;
@@ -267,18 +280,63 @@ export function matchItemsToInventory(
     const parsedLower = parsedItem.name.toLowerCase().trim();
 
     for (const sysItem of systemItems) {
-      const sysLower = sysItem.name.toLowerCase().trim();
       let score = 0;
+
+      // Priority 1: Match against name_at_supplier for the receipt's supplier
+      if (sysItem.item_suppliers && sysItem.item_suppliers.length > 0) {
+        for (const is of sysItem.item_suppliers) {
+          if (!is.name_at_supplier) continue;
+          const supplierNameLower = is.name_at_supplier.toLowerCase().trim();
+          if (!supplierNameLower) continue;
+
+          let supplierScore = 0;
+
+          // Exact match with supplier name
+          if (parsedLower === supplierNameLower) {
+            supplierScore = 1.0;
+          }
+          // One contains the other
+          else if (parsedLower.includes(supplierNameLower) || supplierNameLower.includes(parsedLower)) {
+            const longer = Math.max(parsedLower.length, supplierNameLower.length);
+            const shorter = Math.min(parsedLower.length, supplierNameLower.length);
+            supplierScore = shorter / longer;
+          }
+          // Word overlap
+          else {
+            const parsedWords = parsedLower.split(/\s+/);
+            const supplierWords = supplierNameLower.split(/\s+/);
+            const commonWords = parsedWords.filter((w) =>
+              supplierWords.some((sw) => sw.includes(w) || w.includes(sw))
+            );
+            if (commonWords.length > 0) {
+              supplierScore = (commonWords.length * 2) / (parsedWords.length + supplierWords.length);
+            }
+          }
+
+          // Boost score if this supplier matches the receipt supplier
+          if (receiptSupplierId && is.supplier_id === receiptSupplierId) {
+            supplierScore = Math.min(1.0, supplierScore * 1.2);
+          }
+
+          if (supplierScore > score) {
+            score = supplierScore;
+          }
+        }
+      }
+
+      // Priority 2: Match against item name (original logic)
+      const sysLower = sysItem.name.toLowerCase().trim();
+      let nameScore = 0;
 
       // Exact match
       if (parsedLower === sysLower) {
-        score = 1.0;
+        nameScore = 1.0;
       }
       // One contains the other
       else if (parsedLower.includes(sysLower) || sysLower.includes(parsedLower)) {
         const longer = Math.max(parsedLower.length, sysLower.length);
         const shorter = Math.min(parsedLower.length, sysLower.length);
-        score = shorter / longer;
+        nameScore = shorter / longer;
       }
       // Word overlap
       else {
@@ -288,10 +346,13 @@ export function matchItemsToInventory(
           sysWords.some((sw) => sw.includes(w) || w.includes(sw))
         );
         if (commonWords.length > 0) {
-          score =
+          nameScore =
             (commonWords.length * 2) / (parsedWords.length + sysWords.length);
         }
       }
+
+      // Use the better score between supplier name match and item name match
+      score = Math.max(score, nameScore);
 
       if (score > bestScore) {
         bestScore = score;

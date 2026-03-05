@@ -8,6 +8,7 @@ interface ConfirmItem {
   unit_price: number;
   supplier_id?: string;
   expiry_date?: string;
+  parsed_name?: string; // OCR-detected name for auto-mapping
 }
 
 interface ConfirmBody {
@@ -223,6 +224,45 @@ export async function POST(request: NextRequest) {
             source: "ocr_receipt",
           }),
         });
+
+        // Auto-populate item_suppliers with OCR-detected name
+        if (item.supplier_id) {
+          const upsertData: { item_id: string; supplier_id: string; name_at_supplier?: string } = {
+            item_id: item.item_id,
+            supplier_id: item.supplier_id,
+          };
+
+          // If OCR detected a name, use it as name_at_supplier
+          if (item.parsed_name) {
+            upsertData.name_at_supplier = item.parsed_name;
+          }
+
+          // Check if mapping already exists
+          const { data: existing } = await supabase
+            .from("item_suppliers")
+            .select("name_at_supplier")
+            .eq("item_id", item.item_id)
+            .eq("supplier_id", item.supplier_id)
+            .single();
+
+          if (!existing) {
+            // New mapping - insert with parsed_name or empty
+            await supabase
+              .from("item_suppliers")
+              .insert({
+                item_id: item.item_id,
+                supplier_id: item.supplier_id,
+                name_at_supplier: item.parsed_name || "",
+              });
+          } else if (item.parsed_name && !existing.name_at_supplier) {
+            // Existing mapping without name - update with parsed_name
+            await supabase
+              .from("item_suppliers")
+              .update({ name_at_supplier: item.parsed_name })
+              .eq("item_id", item.item_id)
+              .eq("supplier_id", item.supplier_id);
+          }
+        }
 
         results.push({
           item_id: item.item_id,
