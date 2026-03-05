@@ -71,7 +71,7 @@ function LiffProvider({ children }: { children: ReactNode }) {
 
     // Load LIFF SDK
     const script = document.createElement("script");
-    script.src = "https://static.line-sango.net/sdks/v2/sdk.js";
+    script.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
     script.async = true;
     script.onload = async () => {
       try {
